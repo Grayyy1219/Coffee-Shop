@@ -45,11 +45,6 @@ public class AdminLogin {
         }
         return databaseAccess.validateUser(username, password);
     }
-
-    /**
-     * Runs a minimal demonstration by attempting login and printing the queue
-     * size to show the linked-list-based queue is wired.
-     */
     public static void main(String[] args) {
         try {
             AdminLogin login = new AdminLogin();
