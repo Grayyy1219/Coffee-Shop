@@ -21,6 +21,17 @@ public class MySqlDatabaseAccess implements DatabaseAccess {
         return DriverManager.getConnection(URL, USER, PASSWORD);
     }
 
+    /**
+     * Quickly checks whether the application can connect to the configured
+     * MySQL instance. This is used by the login flow to decide whether to use
+     * the live database or fall back to an in-memory store.
+     */
+    public boolean canConnect() throws SQLException {
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement("SELECT 1")) {
+            return stmt.execute();
+        }
+    }
+
     @Override
     public boolean validateUser(String username, String password) throws SQLException {
         String sql = "SELECT COUNT(*) FROM users WHERE username = ? AND password = ?";
