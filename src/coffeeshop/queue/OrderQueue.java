@@ -58,4 +58,10 @@ public class OrderQueue {
     public int size() {
         return size;
     }
+
+    public void clear() {
+        head = null;
+        tail = null;
+        size = 0;
+    }
 }

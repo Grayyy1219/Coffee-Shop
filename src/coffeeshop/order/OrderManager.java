@@ -19,6 +19,7 @@ public class OrderManager {
     }
 
     public void loadActiveOrders() throws SQLException {
+        orderQueue.clear();
         for (Order order : databaseAccess.loadActiveOrders()) {
             orderQueue.enqueue(order);
         }
