@@ -219,7 +219,72 @@ flowchart TD
     R3 --> R4[Display sorted list in UI]
 ```
 
-## 6. Assumptions & Constraints
+## 6. Desktop Swing UI Blueprint (Offline + Local MySQL)
+
+### 6.1 Visual System
+- **Theme:** Light canvas (#f6f7f9) with accent **#376092** for primary buttons, headers, and active navigation cards.
+- **Shared components:**
+  - Primary buttons with bold text, rounded corners, and hover highlight; secondary buttons in a soft gray background with accent text.
+  - Toast-style status labels (success = green, error = red) placed under toolbars or inside dialogs.
+  - Tables (`JTable`) for data grids wrapped in padded `JScrollPane`; modal dialogs (`JDialog`) for confirmations and payment capture.
+- **Data access:** All screens read/write exclusively to the **local MySQL instance** via the `DatabaseManager`/`DatabaseAccess` layer. No network calls are performed; every search/sort works on in-memory lists populated from JDBC queries.
+
+### 6.2 Login (All Users)
+- **Layout:** Centered card with username/password fields, accent-colored “Sign In” button, and a helper label for status messages.
+- **Validation:**
+  - Empty username/password ➜ inline friendly warning (“Please enter both username and password.”) without hitting the database.
+  - Invalid credentials ➜ error label in red (“Invalid username or password.”) after database check against the local `users` table.
+- **Blocking behavior:** The dashboard frames remain disabled/hidden until authentication succeeds. On success, open the main dashboard and dispose the login window.
+
+### 6.3 Owner / Manager Dashboard
+- **Navigation:** Left sidebar or top cards for **Menu Management**, **Order Queue Monitor**, **Reports/History**, and **Settings**. Active section highlighted with the accent color.
+
+#### Menu Management
+- **Data grid:** Columns `code`, `name`, `category`, `price`, `status` with Add/Edit/Delete buttons above the table.
+- **CRUD dialogs:**
+  - Add/Edit open modal forms with validation (non-empty fields, price > 0). Actions write directly to MySQL `menu_items` and refresh the grid.
+  - Delete prompts confirmation; on confirm, removes the record in MySQL and updates the grid.
+- **Client-side tools:**
+  - **Insertion sort** toggles for Name, Price, Category applied to the in-memory list after pulling from MySQL.
+  - **Linear search** box (by Name) scanning the loaded list and focusing the first match in the table.
+
+#### Order Queue Monitor
+- **Table:** FIFO view of the linked-list queue (`order_id`, customer, total, status, paid, placed time). Buttons to refresh, serve next, and mark paid mirror the queue actions.
+- **Badges:** Status pills for PENDING/SERVED/PAID using accent/neutral colors. Dequeue actions move the head of the list to the payment flow.
+- **Search:** Linear search field for order id/name that scans the current queue snapshot.
+
+#### Reports / History
+- **Filters:** Date range pickers (from/to) plus a text search for order id or customer; all filtering occurs after loading records from MySQL.
+- **Table:** Historical orders with columns for order id, customer, total, payment method, paid date.
+- **Sorting:** Insertion sort toggles (by date, by total) applied to the in-memory list. Sorting does not change the persisted order of rows in MySQL.
+- **Summary tiles:** Two cards above the table showing **Gross Total** and **Paid Total** for the filtered range.
+
+#### Settings
+- Read-only panel showing **Database Connection: Connected/Offline** (based on a quick `canConnect()` check) and **Order Queue Capacity: 50 max** with a gauge/badge showing current active count.
+
+### 6.4 Cashier Workflow
+- **New Order screen:**
+  - Left pane: searchable/sortable menu list (insertion sort by name/category/price) populated from `menu_items`.
+  - Quantity steppers and “Add” buttons build a cart; right pane shows line items with subtotal, tax, and total.
+  - “Clear Cart” secondary action resets the in-memory selections.
+- **Add to Queue:**
+  - On click, validate cart non-empty ➜ create Order, write to MySQL (`orders`, `order_items`), then **enqueue** onto the linked-list queue **only if size < 50**.
+  - If full, show blocking error toast (“Active queue full (50 orders). Finish payments before adding more.”) and skip DB enqueue.
+- **Payment dialog (post-dequeue):** Modal with payment method selector, received amount, and receipt-style summary. Confirming marks order paid in MySQL (`sales` insert, status update) and emits a success toast.
+
+### 6.5 Barista Workflow (Order Queue)
+- **Active Orders panel:** Table bound to the linked-list queue, always showing FIFO ordering with colored badges for PENDING/SERVED/PAID.
+- **Actions:**
+  - **Serve Next:** Dequeue head ➜ open payment dialog or mark served, then refresh list.
+  - **Refresh:** Reload queue snapshot from the `OrderManager` in case other roles have updated it.
+  - **Search:** Linear search box for order id/name highlighting the first match.
+- **Detail pane:** Compact panel beside the table showing selected order’s customer, item list, subtotal/tax/total, and timestamp for quick reference during preparation.
+
+### 6.6 Reachability & Role Flow
+- After login, the main dashboard exposes navigation to all role-specific areas; switching roles is handled by permissions but all screens are reachable from the dashboard shell.
+- Each action explicitly states that it works against **local MySQL data only**, keeping the experience fully offline.
+
+## 7. Assumptions & Constraints
 - Single workstation/user at a time; no concurrent queue modifications assumed.
 - Local MySQL service available; JDBC URL points to localhost.
 - Queue holds **max 50 active orders**; new orders rejected when full.
@@ -228,7 +293,7 @@ flowchart TD
 - Linear search is used for order/menu lookup; insertion sort is used for UI sorting only (does not change DB order).
 - Swing UI handles input validation and error prompts.
 
-## 7. Possible Improvements (optional)
+## 8. Possible Improvements (optional)
 - Add receipt printing and export-to-CSV for sales reports.
 - Add configurable queue limit and roles/permissions per user.
 - Add caching layer for menu data to reduce DB hits on read.
