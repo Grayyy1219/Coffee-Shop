@@ -89,17 +89,30 @@ public class AdminLogin {
      * @throws SQLException when the database cannot be reached
      */
     public boolean authenticate(String username, String password) throws SQLException {
+        return authenticateWithRole(username, password).isPresent();
+    }
+
+    public Optional<String> authenticateWithRole(String username, String password) throws SQLException {
         String trimmedUsername = username == null ? null : username.trim();
         String trimmedPassword = password == null ? null : password.trim();
 
         if (trimmedUsername == null || trimmedPassword == null || trimmedUsername.isBlank() || trimmedPassword.isBlank()) {
             LOGGER.log(Level.WARNING, "Login attempt rejected due to blank credentials. Username provided: {0}", username);
-            return false;
+            return Optional.empty();
         }
 
         boolean valid = databaseAccess.validateUser(trimmedUsername, trimmedPassword);
         LOGGER.log(Level.INFO, "Login attempt for user ''{0}'' resulted in: {1}", new Object[]{trimmedUsername, valid ? "SUCCESS" : "INVALID"});
-        return valid;
+        if (!valid) {
+            return Optional.empty();
+        }
+
+        String role = databaseAccess.getUserRole(trimmedUsername);
+        if (role == null || role.isBlank()) {
+            LOGGER.log(Level.INFO, "No explicit role found for user ''{0}''; defaulting to owner.", trimmedUsername);
+            role = "owner";
+        }
+        return Optional.of(role);
     }
 
     public int getActiveOrderCount() {
@@ -245,13 +258,14 @@ class AdminLoginFrame extends JFrame {
         Arrays.fill(passwordChars, ' ');
 
         try {
-            if (adminLogin.authenticate(username, password)) {
+            Optional<String> roleResult = adminLogin.authenticateWithRole(username, password);
+            if (roleResult.isPresent()) {
                 statusLabel.setForeground(SUCCESS_COLOR);
-                statusLabel.setText("Login successful. Opening management console...");
-                LOGGER.log(Level.INFO, "User ''{0}'' logged in successfully.", username);
+                statusLabel.setText("Login successful. Opening role-based workspace...");
+                LOGGER.log(Level.INFO, "User ''{0}'' logged in successfully with role ''{1}''.", new Object[]{username, roleResult.get()});
                 SwingUtilities.invokeLater(() -> {
-                    AdminDashboardFrame dashboard = new AdminDashboardFrame(adminLogin);
-                    dashboard.setVisible(true);
+                    RoleFlowFrame workspace = new RoleFlowFrame(adminLogin.getOrderManager(), roleResult.get());
+                    workspace.setVisible(true);
                     dispose();
                 });
             } else {

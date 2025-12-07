@@ -47,6 +47,21 @@ public class MySqlDatabaseAccess implements DatabaseAccess {
     }
 
     @Override
+    public String getUserRole(String username) throws SQLException {
+        String sql = "SELECT role FROM users WHERE username = ? LIMIT 1";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, username);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("role");
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
     public void saveOrder(Order order) throws SQLException {
         String orderSql = "INSERT INTO orders (order_id, customer_name, created_at, status, paid, total) VALUES (?, ?, ?, ?, ?, ?)";
         String itemSql = "INSERT INTO order_items (order_id, item_code, quantity, line_total) VALUES (?, ?, ?, ?)";
