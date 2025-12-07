@@ -1,5 +1,6 @@
 package coffeeshop.db;
 
+import coffeeshop.model.MenuItem;
 import coffeeshop.model.Order;
 import coffeeshop.model.OrderItem;
 import coffeeshop.model.OrderStatus;
@@ -9,6 +10,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,6 +64,25 @@ public class MySqlDatabaseAccess implements DatabaseAccess {
     }
 
     @Override
+    public List<MenuItem> loadMenuItems() throws SQLException {
+        List<MenuItem> items = new ArrayList<>();
+        String sql = "SELECT code, name, category, price FROM menu_items ORDER BY category, name";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                items.add(new MenuItem(
+                        rs.getString("code"),
+                        rs.getString("name"),
+                        rs.getString("category"),
+                        rs.getDouble("price")
+                ));
+            }
+        }
+        return items;
+    }
+
+    @Override
     public void saveOrder(Order order) throws SQLException {
         String orderSql = "INSERT INTO orders (order_id, customer_name, created_at, status, paid, total) VALUES (?, ?, ?, ?, ?, ?)";
         String itemSql = "INSERT INTO order_items (order_id, item_code, quantity, line_total) VALUES (?, ?, ?, ?)";
@@ -110,23 +131,42 @@ public class MySqlDatabaseAccess implements DatabaseAccess {
     @Override
     public List<Order> loadActiveOrders() throws SQLException {
         List<Order> orders = new ArrayList<>();
-        String sql = "SELECT order_id, customer_name, created_at, status, paid FROM orders WHERE status <> 'PAID' ORDER BY created_at";
+        String sql = "SELECT order_id, customer_name, created_at, status, paid, total FROM orders WHERE status <> 'PAID' ORDER BY created_at";
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                // Only hydrate minimal fields; items can be added later if needed.
-                Order order = new Order(
-                        rs.getString("order_id"),
-                        rs.getString("customer_name"),
-                        List.of()
-                );
-                if (rs.getBoolean("paid")) {
-                    order.markPaid();
-                }
-                orders.add(order);
+                orders.add(mapOrder(rs));
             }
         }
         return orders;
+    }
+
+    @Override
+    public List<Order> loadAllOrders() throws SQLException {
+        List<Order> orders = new ArrayList<>();
+        String sql = "SELECT order_id, customer_name, created_at, status, paid, total FROM orders ORDER BY created_at";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                orders.add(mapOrder(rs));
+            }
+        }
+        return orders;
+    }
+
+    private Order mapOrder(ResultSet rs) throws SQLException {
+        Timestamp timestamp = rs.getTimestamp("created_at");
+        LocalDateTime createdAt = timestamp == null ? LocalDateTime.now() : timestamp.toLocalDateTime();
+        return new Order(
+                rs.getString("order_id"),
+                rs.getString("customer_name"),
+                List.of(),
+                createdAt,
+                OrderStatus.valueOf(rs.getString("status")),
+                rs.getBoolean("paid"),
+                rs.getDouble("total")
+        );
     }
 }

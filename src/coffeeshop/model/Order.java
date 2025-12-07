@@ -12,15 +12,28 @@ public class Order {
     private final LocalDateTime createdAt;
     private OrderStatus status;
     private boolean paid;
+    private final double total;
     private final List<OrderItem> items;
 
     public Order(String orderId, String customerName, List<OrderItem> items) {
+        this(orderId, customerName, items, LocalDateTime.now(), OrderStatus.PENDING, false,
+                items.stream().mapToDouble(OrderItem::getLineTotal).sum());
+    }
+
+    public Order(String orderId,
+                 String customerName,
+                 List<OrderItem> items,
+                 LocalDateTime createdAt,
+                 OrderStatus status,
+                 boolean paid,
+                 double total) {
         this.orderId = Objects.requireNonNull(orderId, "orderId");
         this.customerName = Objects.requireNonNullElse(customerName, "Walk-in");
         this.items = new ArrayList<>(Objects.requireNonNull(items, "items"));
-        this.createdAt = LocalDateTime.now();
-        this.status = OrderStatus.PENDING;
-        this.paid = false;
+        this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
+        this.status = Objects.requireNonNull(status, "status");
+        this.paid = paid;
+        this.total = total;
     }
 
     public String getOrderId() {
@@ -48,7 +61,7 @@ public class Order {
     }
 
     public double getTotal() {
-        return items.stream().mapToDouble(OrderItem::getLineTotal).sum();
+        return total;
     }
 
     public void markServed() {

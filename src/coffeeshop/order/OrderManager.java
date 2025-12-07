@@ -1,6 +1,7 @@
 package coffeeshop.order;
 
 import coffeeshop.db.DatabaseAccess;
+import coffeeshop.model.MenuItem;
 import coffeeshop.model.Order;
 import coffeeshop.model.OrderStatus;
 import coffeeshop.queue.OrderQueue;
@@ -23,6 +24,14 @@ public class OrderManager {
         for (Order order : databaseAccess.loadActiveOrders()) {
             orderQueue.enqueue(order);
         }
+    }
+
+    public List<MenuItem> loadMenuItems() throws SQLException {
+        return databaseAccess.loadMenuItems();
+    }
+
+    public List<Order> loadAllOrders() throws SQLException {
+        return databaseAccess.loadAllOrders();
     }
 
     public void placeOrder(Order order) throws SQLException {

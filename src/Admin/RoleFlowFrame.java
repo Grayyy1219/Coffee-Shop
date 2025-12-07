@@ -1,5 +1,7 @@
 package Admin;
 
+import coffeeshop.model.MenuItem;
+import coffeeshop.model.Order;
 import coffeeshop.order.OrderManager;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -8,7 +10,12 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.sql.SQLException;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -39,6 +46,8 @@ public class RoleFlowFrame extends javax.swing.JFrame {
     private static final Color ACCENT_COLOR = new Color(55, 96, 146);
     private static final Color SOFT_BORDER = new Color(220, 223, 230);
     private static final Color SOFT_TEXT = new Color(68, 68, 68);
+    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("MMM d, h:mm a");
+    private static final Logger LOGGER = Logger.getLogger(RoleFlowFrame.class.getName());
 
     private final OrderManager orderManager;
     private final String role;
@@ -48,6 +57,7 @@ public class RoleFlowFrame extends javax.swing.JFrame {
     private javax.swing.JPanel actionsCashierPanel;
     private javax.swing.JPanel actionsOwnerMenuPanel;
     private javax.swing.JPanel actionsQueuePanel;
+    private javax.swing.JPanel actionsReportsPanel1;
     private javax.swing.JTable baristaDetailArea;
     private javax.swing.JScrollPane baristaDetailScrollPane;
     private javax.swing.JPanel baristaPanel;
@@ -117,6 +127,7 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         queueScrollPane = new javax.swing.JScrollPane();
         queueTable = new javax.swing.JTable();
         reportsPanel = new javax.swing.JPanel();
+        actionsReportsPanel1 = new javax.swing.JPanel();
         reportsScrollPane = new javax.swing.JScrollPane();
         reportsTable = new javax.swing.JTable();
         settingsPanel = new javax.swing.JPanel();
@@ -226,7 +237,8 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         reportsPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
         reportsPanel.setLayout(new java.awt.BorderLayout());
 
-        reportsScrollPane.setPreferredSize(new java.awt.Dimension(2, 2));
+        actionsReportsPanel1.setOpaque(false);
+        reportsPanel.add(actionsReportsPanel1, java.awt.BorderLayout.PAGE_START);
 
         reportsTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -310,8 +322,6 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         baristaSplitContainer.setMinimumSize(new java.awt.Dimension(2, 2));
         baristaSplitContainer.setOpaque(false);
 
-        baristaQueueScrollPane.setPreferredSize(new java.awt.Dimension(2, 2));
-
         baristaTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null, null, null},
@@ -326,8 +336,6 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         baristaQueueScrollPane.setViewportView(baristaTable);
 
         baristaSplitContainer.setRightComponent(baristaQueueScrollPane);
-
-        baristaDetailScrollPane.setPreferredSize(new java.awt.Dimension(2, 2));
 
         baristaDetailArea.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -386,8 +394,15 @@ public class RoleFlowFrame extends javax.swing.JFrame {
                 .forEach(actionsOwnerMenuPanel::add);
 
         DefaultTableModel model = new DefaultTableModel(new Object[]{"Code", "Name", "Category", "Price", "Status"}, 0);
-        model.addRow(new Object[]{"CF001", "Latte", "Coffee", "$4.50", "ACTIVE"});
-        model.addRow(new Object[]{"PT101", "Chocolate Croissant", "Pastry", "$3.25", "ACTIVE"});
+        for (MenuItem item : loadMenuItems()) {
+            model.addRow(new Object[]{
+                item.getCode(),
+                item.getName(),
+                item.getCategory(),
+                formatCurrency(item.getPrice()),
+                "ACTIVE"
+            });
+        }
         menuTable.setModel(model);
         menuTable.setRowHeight(26);
         menuTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
@@ -403,8 +418,19 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         Arrays.asList(refresh, serveNext, markPaid, searchField).forEach(actionsQueuePanel::add);
 
         DefaultTableModel model = new DefaultTableModel(new Object[]{"Order ID", "Customer", "Total", "Status", "Paid", "Placed"}, 0);
-        model.addRow(new Object[]{"ORD-1042", "Amira", "$12.40", "PENDING", "No", "10:04 AM"});
-        model.addRow(new Object[]{"ORD-1043", "Lee", "$8.10", "SERVED", "Yes", "10:06 AM"});
+        for (Order order : loadActiveOrders()) {
+            model.addRow(new Object[]{
+                order.getOrderId(),
+                order.getCustomerName(),
+                formatCurrency(order.getTotal()),
+                order.getStatus().name(),
+                order.isPaid() ? "Yes" : "No",
+                TIME_FORMAT.format(order.getCreatedAt())
+            });
+        }
+        if (model.getRowCount() == 0) {
+            model.addRow(new Object[]{"—", "No active orders found", "—", "—", "—", "—"});
+        }
         queueTable.setModel(model);
         queueTable.setRowHeight(26);
         queueTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
@@ -427,13 +453,26 @@ public class RoleFlowFrame extends javax.swing.JFrame {
 
         JPanel summary = new JPanel();
         summary.setOpaque(false);
-        summary.add(summaryBadge("Gross Total", "$1,240.40"));
-        summary.add(summaryBadge("Paid Total", "$1,180.10"));
+        List<Order> allOrders = loadAllOrders();
+        double grossTotal = allOrders.stream().mapToDouble(Order::getTotal).sum();
+        double paidTotal = allOrders.stream().filter(Order::isPaid).mapToDouble(Order::getTotal).sum();
+        summary.add(summaryBadge("Gross Total", formatCurrency(grossTotal)));
+        summary.add(summaryBadge("Paid Total", formatCurrency(paidTotal)));
         reportsPanel.add(summary, BorderLayout.SOUTH);
 
         DefaultTableModel model = new DefaultTableModel(new Object[]{"Order ID", "Customer", "Total", "Payment", "Paid Date"}, 0);
-        model.addRow(new Object[]{"ORD-0998", "Chris", "$15.30", "Card", "Sep 20, 9:10 AM"});
-        model.addRow(new Object[]{"ORD-0999", "Maria", "$7.80", "Cash", "Sep 20, 9:20 AM"});
+        for (Order order : allOrders) {
+            model.addRow(new Object[]{
+                order.getOrderId(),
+                order.getCustomerName(),
+                formatCurrency(order.getTotal()),
+                order.isPaid() ? "Paid" : "Unpaid",
+                order.isPaid() ? TIME_FORMAT.format(order.getCreatedAt()) : "—"
+            });
+        }
+        if (model.getRowCount() == 0) {
+            model.addRow(new Object[]{"—", "No orders available", "—", "—", "—"});
+        }
         reportsTable.setModel(model);
         reportsTable.setRowHeight(26);
         reportsTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
@@ -478,18 +517,15 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         Arrays.asList(search, sortName, sortCategory, sortPrice).forEach(actionsCashierPanel::add);
 
         DefaultTableModel menuModel = new DefaultTableModel(new Object[]{"Code", "Name", "Category", "Price"}, 0);
-        menuModel.addRow(new Object[]{"CF001", "Latte", "Coffee", "$4.50"});
-        menuModel.addRow(new Object[]{"CF002", "Espresso", "Coffee", "$3.20"});
-        menuModel.addRow(new Object[]{"PT101", "Croissant", "Pastry", "$3.00"});
+        for (MenuItem item : loadMenuItems()) {
+            menuModel.addRow(new Object[]{
+                item.getCode(),
+                item.getName(),
+                item.getCategory(),
+                formatCurrency(item.getPrice())
+            });
+        }
         cashierTable1.setModel(menuModel);
-        cashierTable1.setRowHeight(26);
-        cashierTable1.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
-        cashierTable1.setFont(new Font("SansSerif", Font.PLAIN, 12));
-
-        DefaultTableModel cartModel = new DefaultTableModel(new Object[]{"Item", "Qty", "Line Total"}, 0);
-        cartModel.addRow(new Object[]{"Latte", 2, "$9.00"});
-        cartModel.addRow(new Object[]{"Croissant", 1, "$3.00"});
-        cashierTable1.setModel(cartModel);
         cashierTable1.setRowHeight(26);
         cashierTable1.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
         cashierTable1.setFont(new Font("SansSerif", Font.PLAIN, 12));
@@ -534,8 +570,18 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         Arrays.asList(serveNext, refresh, search).forEach(actionsBaristaPanel::add);
 
         DefaultTableModel model = new DefaultTableModel(new Object[]{"Order ID", "Customer", "Total", "Status", "Paid"}, 0);
-        model.addRow(new Object[]{"ORD-1042", "Amira", "$12.40", "PENDING", "No"});
-        model.addRow(new Object[]{"ORD-1043", "Lee", "$8.10", "SERVED", "Yes"});
+        for (Order order : loadActiveOrders()) {
+            model.addRow(new Object[]{
+                order.getOrderId(),
+                order.getCustomerName(),
+                formatCurrency(order.getTotal()),
+                order.getStatus().name(),
+                order.isPaid() ? "Yes" : "No"
+            });
+        }
+        if (model.getRowCount() == 0) {
+            model.addRow(new Object[]{"—", "No active orders found", "—", "—", "—"});
+        }
         baristaTable.setModel(model);
         baristaTable.setRowHeight(26);
         baristaTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
@@ -552,6 +598,47 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         baristaSplitContainer.setDividerLocation(0.6);
         baristaSplitContainer.setLeftComponent(baristaQueueScrollPane);
         baristaSplitContainer.setRightComponent(baristaDetailScrollPane);
+    }
+
+    private List<MenuItem> loadMenuItems() {
+        if (orderManager == null) {
+            return List.of();
+        }
+        try {
+            return orderManager.loadMenuItems();
+        } catch (SQLException ex) {
+            LOGGER.log(Level.WARNING, "Unable to load menu items from database", ex);
+            return List.of();
+        }
+    }
+
+    private List<Order> loadActiveOrders() {
+        if (orderManager == null) {
+            return List.of();
+        }
+        try {
+            orderManager.loadActiveOrders();
+            return orderManager.getActiveOrders();
+        } catch (SQLException ex) {
+            LOGGER.log(Level.WARNING, "Unable to load active orders from database", ex);
+            return List.of();
+        }
+    }
+
+    private List<Order> loadAllOrders() {
+        if (orderManager == null) {
+            return List.of();
+        }
+        try {
+            return orderManager.loadAllOrders();
+        } catch (SQLException ex) {
+            LOGGER.log(Level.WARNING, "Unable to load orders from database", ex);
+            return List.of();
+        }
+    }
+
+    private String formatCurrency(double value) {
+        return String.format("$%.2f", value);
     }
 
     private void applyRoleVisibility() {
