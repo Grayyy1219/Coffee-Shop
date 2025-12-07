@@ -1,10 +1,17 @@
 package com.coffeeshop.ui;
 
 import com.coffeeshop.db.DBConnection;
+import java.awt.Color;
+import java.awt.Image;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import javax.swing.ImageIcon;
 import javax.swing.JOptionPane;
 
 /**
@@ -18,6 +25,7 @@ public class LoginFrame extends javax.swing.JFrame {
     public LoginFrame() {
         initComponents();
         setLocationRelativeTo(null);
+        loadLogo();
     }
 
     /**
@@ -31,6 +39,7 @@ public class LoginFrame extends javax.swing.JFrame {
 
         backgroundPanel = new javax.swing.JPanel();
         cardPanel = new javax.swing.JPanel();
+        logoLabel = new javax.swing.JLabel();
         titleLabel = new javax.swing.JLabel();
         usernameLabel = new javax.swing.JLabel();
         usernameField = new javax.swing.JTextField();
@@ -43,27 +52,38 @@ public class LoginFrame extends javax.swing.JFrame {
         setTitle("Coffee Shop | Login");
         setResizable(false);
 
+        backgroundPanel.setBackground(new java.awt.Color(243, 246, 250));
         backgroundPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(24, 24, 24, 24));
 
+        cardPanel.setBackground(new java.awt.Color(255, 255, 255));
         cardPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder());
 
-        titleLabel.setFont(new java.awt.Font("SansSerif", 1, 22)); // NOI18N
+        logoLabel.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        logoLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        logoLabel.setText("No Logo Available");
+        logoLabel.setPreferredSize(new java.awt.Dimension(160, 140));
+
+        titleLabel.setFont(new java.awt.Font("Segoe UI", 1, 22)); // NOI18N
         titleLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         titleLabel.setText("Coffee Shop Login");
 
-        usernameLabel.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
+        usernameLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         usernameLabel.setText("Username");
 
-        usernameField.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
-        usernameField.setMargin(new java.awt.Insets(8, 8, 8, 8));
+        usernameField.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        usernameField.setToolTipText("Enter your system username");
+        usernameField.setMargin(new java.awt.Insets(5, 5, 5, 5));
 
-        passwordLabel.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
+        passwordLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         passwordLabel.setText("Password");
 
-        passwordField.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
-        passwordField.setMargin(new java.awt.Insets(8, 8, 8, 8));
+        passwordField.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        passwordField.setToolTipText("Enter your password");
+        passwordField.setMargin(new java.awt.Insets(10, 10, 10, 10));
 
-        loginButton.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
+        loginButton.setBackground(new java.awt.Color(82, 109, 130));
+        loginButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        loginButton.setForeground(new java.awt.Color(255, 255, 255));
         loginButton.setText("Login");
         loginButton.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 15, 5, 15));
         loginButton.setBorderPainted(false);
@@ -75,8 +95,10 @@ public class LoginFrame extends javax.swing.JFrame {
             }
         });
 
-        exitButton.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
+        exitButton.setBackground(new java.awt.Color(238, 240, 243));
+        exitButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         exitButton.setText("Exit");
+        exitButton.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 15, 5, 15));
         exitButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 exitButtonActionPerformed(evt);
@@ -88,22 +110,25 @@ public class LoginFrame extends javax.swing.JFrame {
         cardPanelLayout.setHorizontalGroup(
             cardPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(cardPanelLayout.createSequentialGroup()
-                .add(10, 10, 10)
+                .add(11, 11, 11)
                 .add(cardPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.CENTER)
+                    .add(logoLabel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
                     .add(titleLabel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .add(cardPanelLayout.createSequentialGroup()
                         .add(loginButton, 120, 120, 120)
-                        .add(11, 11, 11)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .add(exitButton, 120, 120, 120))
                     .add(usernameLabel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .add(usernameField, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 270, Short.MAX_VALUE)
+                    .add(usernameField, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 300, Short.MAX_VALUE)
                     .add(passwordLabel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .add(passwordField, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 270, Short.MAX_VALUE))
-                .addContainerGap(19, Short.MAX_VALUE))
+                    .add(passwordField, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 300, Short.MAX_VALUE))
+                .addContainerGap(org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         cardPanelLayout.setVerticalGroup(
             cardPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(cardPanelLayout.createSequentialGroup()
+                .add(logoLabel, 140, 140, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(titleLabel)
                 .add(6, 6, 24)
                 .add(usernameLabel)
@@ -113,7 +138,7 @@ public class LoginFrame extends javax.swing.JFrame {
                 .add(passwordLabel)
                 .add(6, 6, 6)
                 .add(passwordField, 40, 40, 40)
-                .add(6, 6, 32)
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 20, Short.MAX_VALUE)
                 .add(cardPanelLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
                     .add(loginButton, 36, 36, 36)
                     .add(exitButton, 36, 36, 36))
@@ -213,6 +238,55 @@ public class LoginFrame extends javax.swing.JFrame {
         }
     }
 
+    private void loadLogo() {
+        String sql = "SELECT asset_blob FROM system_assets WHERE asset_key = 'logo'";
+        logoLabel.setText("Loading logo...");
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                Blob logoBlob = rs.getBlob("asset_blob");
+                ImageIcon icon = blobToImageIcon(logoBlob);
+                if (icon != null) {
+                    logoLabel.setIcon(icon);
+                    logoLabel.setText("");
+                } else {
+                    logoLabel.setText("No Logo Available");
+                }
+            } else {
+                logoLabel.setText("No Logo Available");
+            }
+        } catch (SQLException ex) {
+            logoLabel.setText("No Logo Available");
+        }
+    }
+
+    private ImageIcon blobToImageIcon(Blob blob) throws SQLException {
+        if (blob == null) {
+            return null;
+        }
+
+        try (InputStream inputStream = blob.getBinaryStream();
+             ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
+            byte[] data = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(data, 0, data.length)) != -1) {
+                buffer.write(data, 0, bytesRead);
+            }
+
+            byte[] imageBytes = buffer.toByteArray();
+            if (imageBytes.length == 0) {
+                return null;
+            }
+
+            Image image = new ImageIcon(imageBytes).getImage();
+            Image scaled = image.getScaledInstance(140, 140, Image.SCALE_SMOOTH);
+            return new ImageIcon(scaled);
+        } catch (IOException ex) {
+            return null;
+        }
+    }
+
     public static void main(String args[]) {
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
@@ -221,7 +295,7 @@ public class LoginFrame extends javax.swing.JFrame {
          */
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
+                if ("".equals(info.getName())) {
                     javax.swing.UIManager.setLookAndFeel(info.getClassName());
                     break;
                 }
@@ -250,6 +324,7 @@ public class LoginFrame extends javax.swing.JFrame {
     private javax.swing.JPanel cardPanel;
     private javax.swing.JButton exitButton;
     private javax.swing.JButton loginButton;
+    private javax.swing.JLabel logoLabel;
     private javax.swing.JPasswordField passwordField;
     private javax.swing.JLabel passwordLabel;
     private javax.swing.JLabel titleLabel;
