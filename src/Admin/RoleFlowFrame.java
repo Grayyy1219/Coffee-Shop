@@ -48,27 +48,33 @@ public class RoleFlowFrame extends javax.swing.JFrame {
     private javax.swing.JPanel actionsCashierPanel;
     private javax.swing.JPanel actionsOwnerMenuPanel;
     private javax.swing.JPanel actionsQueuePanel;
+    private javax.swing.JTable baristaDetailArea;
+    private javax.swing.JScrollPane baristaDetailScrollPane;
     private javax.swing.JPanel baristaPanel;
-    private javax.swing.JPanel baristaSplitContainer;
+    private javax.swing.JScrollPane baristaQueueScrollPane;
+    private javax.swing.JSplitPane baristaSplitContainer;
+    private javax.swing.JTable baristaTable;
     private javax.swing.JPanel cashierCartPanel;
     private javax.swing.JPanel cashierMenuPanel;
+    private javax.swing.JScrollPane cashierMenuPanel1;
+    private javax.swing.JScrollPane cashierMenuScrollPane;
     private javax.swing.JPanel cashierPanel;
+    private javax.swing.JTable cashierTable1;
     private javax.swing.JPanel headerPanel;
-    private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JScrollPane jScrollPane2;
-    private javax.swing.JScrollPane jScrollPane3;
-    private javax.swing.JScrollPane jScrollPane4;
-    private javax.swing.JScrollPane jScrollPane5;
-    private javax.swing.JScrollPane jScrollPane6;
-    private javax.swing.JScrollPane jScrollPane7;
     private javax.swing.JLabel legendBaristaLabel;
     private javax.swing.JLabel legendCashierLabel;
     private javax.swing.JLabel legendOwnerLabel;
     private javax.swing.JPanel menuManagementPanel;
+    private javax.swing.JScrollPane menuScrollPane;
+    private javax.swing.JTable menuTable;
     private javax.swing.JPanel ownerPanel;
     private javax.swing.JTabbedPane ownerTabs;
     private javax.swing.JPanel queueMonitorPanel;
+    private javax.swing.JScrollPane queueScrollPane;
+    private javax.swing.JTable queueTable;
     private javax.swing.JPanel reportsPanel;
+    private javax.swing.JScrollPane reportsScrollPane;
+    private javax.swing.JTable reportsTable;
     private javax.swing.JLabel roleBadgeLabel;
     private javax.swing.JTabbedPane roleTabbedPane;
     private javax.swing.JPanel settingsPanel;
@@ -83,6 +89,7 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         this.role = role == null ? "" : role.trim();
         initComponents();
         configureHeader();
+        configureUnknownRolePanel();
         populateOwnerPanels();
         populateCashierPanels();
         populateBaristaPanels();
@@ -103,26 +110,32 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         ownerTabs = new javax.swing.JTabbedPane();
         menuManagementPanel = new javax.swing.JPanel();
         actionsOwnerMenuPanel = new javax.swing.JPanel();
-        jScrollPane1 = new javax.swing.JScrollPane();
+        menuScrollPane = new javax.swing.JScrollPane();
+        menuTable = new javax.swing.JTable();
         queueMonitorPanel = new javax.swing.JPanel();
         actionsQueuePanel = new javax.swing.JPanel();
-        jScrollPane2 = new javax.swing.JScrollPane();
+        queueScrollPane = new javax.swing.JScrollPane();
+        queueTable = new javax.swing.JTable();
         reportsPanel = new javax.swing.JPanel();
-        jScrollPane3 = new javax.swing.JScrollPane();
+        reportsScrollPane = new javax.swing.JScrollPane();
+        reportsTable = new javax.swing.JTable();
         settingsPanel = new javax.swing.JPanel();
         legendOwnerLabel = new javax.swing.JLabel();
         cashierPanel = new javax.swing.JPanel();
         cashierMenuPanel = new javax.swing.JPanel();
         actionsCashierPanel = new javax.swing.JPanel();
-        jScrollPane4 = new javax.swing.JScrollPane();
+        cashierMenuScrollPane = new javax.swing.JScrollPane();
+        cashierTable1 = new javax.swing.JTable();
         cashierCartPanel = new javax.swing.JPanel();
-        jScrollPane5 = new javax.swing.JScrollPane();
+        cashierMenuPanel1 = new javax.swing.JScrollPane();
         legendCashierLabel = new javax.swing.JLabel();
         baristaPanel = new javax.swing.JPanel();
         actionsBaristaPanel = new javax.swing.JPanel();
-        baristaSplitContainer = new javax.swing.JPanel();
-        jScrollPane6 = new javax.swing.JScrollPane();
-        jScrollPane7 = new javax.swing.JScrollPane();
+        baristaSplitContainer = new javax.swing.JSplitPane();
+        baristaQueueScrollPane = new javax.swing.JScrollPane();
+        baristaTable = new javax.swing.JTable();
+        baristaDetailScrollPane = new javax.swing.JScrollPane();
+        baristaDetailArea = new javax.swing.JTable();
         legendBaristaLabel = new javax.swing.JLabel();
         unknownRolePanel = new javax.swing.JPanel();
 
@@ -150,8 +163,8 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         roleBadgeLabel.setFont(new java.awt.Font("SansSerif", 0, 12)); // NOI18N
         roleBadgeLabel.setForeground(new java.awt.Color(104, 104, 104));
         roleBadgeLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        roleBadgeLabel.setOpaque(true);
         roleBadgeLabel.setText("Role: Unknown");
+        roleBadgeLabel.setOpaque(true);
         headerPanel.add(roleBadgeLabel, java.awt.BorderLayout.EAST);
 
         getContentPane().add(headerPanel, java.awt.BorderLayout.PAGE_START);
@@ -169,28 +182,72 @@ public class RoleFlowFrame extends javax.swing.JFrame {
 
         actionsOwnerMenuPanel.setOpaque(false);
         menuManagementPanel.add(actionsOwnerMenuPanel, java.awt.BorderLayout.PAGE_START);
-        menuManagementPanel.add(jScrollPane1, java.awt.BorderLayout.CENTER);
 
-        ownerTabs.addTab("tab1", menuManagementPanel);
+        menuTable.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        menuScrollPane.setViewportView(menuTable);
+
+        menuManagementPanel.add(menuScrollPane, java.awt.BorderLayout.CENTER);
+
+        ownerTabs.addTab("Menu", menuManagementPanel);
 
         queueMonitorPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
         queueMonitorPanel.setLayout(new java.awt.BorderLayout());
 
         actionsQueuePanel.setOpaque(false);
         queueMonitorPanel.add(actionsQueuePanel, java.awt.BorderLayout.PAGE_START);
-        queueMonitorPanel.add(jScrollPane2, java.awt.BorderLayout.CENTER);
 
-        ownerTabs.addTab("tab2", queueMonitorPanel);
+        queueTable.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        queueScrollPane.setViewportView(queueTable);
+
+        queueMonitorPanel.add(queueScrollPane, java.awt.BorderLayout.CENTER);
+
+        ownerTabs.addTab("Queue Monitor", queueMonitorPanel);
 
         reportsPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
         reportsPanel.setLayout(new java.awt.BorderLayout());
-        reportsPanel.add(jScrollPane3, java.awt.BorderLayout.CENTER);
 
-        ownerTabs.addTab("tab3", reportsPanel);
+        reportsScrollPane.setPreferredSize(new java.awt.Dimension(2, 2));
+
+        reportsTable.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        reportsScrollPane.setViewportView(reportsTable);
+
+        reportsPanel.add(reportsScrollPane, java.awt.BorderLayout.CENTER);
+
+        ownerTabs.addTab("Reports", reportsPanel);
 
         settingsPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
         settingsPanel.setLayout(new java.awt.GridBagLayout());
-        ownerTabs.addTab("tab4", settingsPanel);
+        ownerTabs.addTab("Settings", settingsPanel);
 
         ownerPanel.add(ownerTabs, java.awt.BorderLayout.CENTER);
 
@@ -199,7 +256,7 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         legendOwnerLabel.setText("Manager controls for CRUD, queue oversight, reporting, and system settings.");
         ownerPanel.add(legendOwnerLabel, java.awt.BorderLayout.PAGE_END);
 
-        roleTabbedPane.addTab("tab1", ownerPanel);
+        roleTabbedPane.addTab("Owner / Manager", ownerPanel);
 
         cashierPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 0, 0, 0));
         cashierPanel.setLayout(new java.awt.BorderLayout());
@@ -209,13 +266,27 @@ public class RoleFlowFrame extends javax.swing.JFrame {
 
         actionsCashierPanel.setOpaque(false);
         cashierMenuPanel.add(actionsCashierPanel, java.awt.BorderLayout.PAGE_START);
-        cashierMenuPanel.add(jScrollPane4, java.awt.BorderLayout.CENTER);
+
+        cashierTable1.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        cashierMenuScrollPane.setViewportView(cashierTable1);
+
+        cashierMenuPanel.add(cashierMenuScrollPane, java.awt.BorderLayout.CENTER);
 
         cashierPanel.add(cashierMenuPanel, java.awt.BorderLayout.CENTER);
 
         cashierCartPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
         cashierCartPanel.setLayout(new java.awt.BorderLayout());
-        cashierCartPanel.add(jScrollPane5, java.awt.BorderLayout.CENTER);
+        cashierCartPanel.add(cashierMenuPanel1, java.awt.BorderLayout.PAGE_END);
 
         cashierPanel.add(cashierCartPanel, java.awt.BorderLayout.EAST);
 
@@ -224,7 +295,7 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         legendCashierLabel.setText("Cashier builds cart, validates, writes to MySQL, then enqueues if queue < 50.");
         cashierPanel.add(legendCashierLabel, java.awt.BorderLayout.PAGE_END);
 
-        roleTabbedPane.addTab("tab2", cashierPanel);
+        roleTabbedPane.addTab("Cashier", cashierPanel);
 
         baristaPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 0, 0, 0));
         baristaPanel.setLayout(new java.awt.BorderLayout());
@@ -232,10 +303,46 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         actionsBaristaPanel.setOpaque(false);
         baristaPanel.add(actionsBaristaPanel, java.awt.BorderLayout.PAGE_START);
 
+        baristaSplitContainer.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        baristaSplitContainer.setDividerLocation(650);
+        baristaSplitContainer.setResizeWeight(0.65);
+        baristaSplitContainer.setMaximumSize(new java.awt.Dimension(2, 2));
+        baristaSplitContainer.setMinimumSize(new java.awt.Dimension(2, 2));
         baristaSplitContainer.setOpaque(false);
-        baristaSplitContainer.setLayout(new java.awt.BorderLayout());
-        baristaSplitContainer.add(jScrollPane6, java.awt.BorderLayout.CENTER);
-        baristaSplitContainer.add(jScrollPane7, java.awt.BorderLayout.EAST);
+
+        baristaQueueScrollPane.setPreferredSize(new java.awt.Dimension(2, 2));
+
+        baristaTable.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        baristaQueueScrollPane.setViewportView(baristaTable);
+
+        baristaSplitContainer.setRightComponent(baristaQueueScrollPane);
+
+        baristaDetailScrollPane.setPreferredSize(new java.awt.Dimension(2, 2));
+
+        baristaDetailArea.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        baristaDetailScrollPane.setViewportView(baristaDetailArea);
+
+        baristaSplitContainer.setRightComponent(baristaDetailScrollPane);
 
         baristaPanel.add(baristaSplitContainer, java.awt.BorderLayout.CENTER);
 
@@ -244,11 +351,11 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         legendBaristaLabel.setText("Queue is FIFO. Serve dequeues head, opens payment dialog, then refreshes.");
         baristaPanel.add(legendBaristaLabel, java.awt.BorderLayout.PAGE_END);
 
-        roleTabbedPane.addTab("tab3", baristaPanel);
+        roleTabbedPane.addTab("Barista", baristaPanel);
 
         unknownRolePanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
         unknownRolePanel.setLayout(new java.awt.BorderLayout());
-        roleTabbedPane.addTab("tab4", unknownRolePanel);
+        roleTabbedPane.addTab("Unknown", unknownRolePanel);
 
         getContentPane().add(roleTabbedPane, java.awt.BorderLayout.CENTER);
 
@@ -374,18 +481,18 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         menuModel.addRow(new Object[]{"CF001", "Latte", "Coffee", "$4.50"});
         menuModel.addRow(new Object[]{"CF002", "Espresso", "Coffee", "$3.20"});
         menuModel.addRow(new Object[]{"PT101", "Croissant", "Pastry", "$3.00"});
-        cashierTable.setModel(menuModel);
-        cashierTable.setRowHeight(26);
-        cashierTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
-        cashierTable.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        cashierTable1.setModel(menuModel);
+        cashierTable1.setRowHeight(26);
+        cashierTable1.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
+        cashierTable1.setFont(new Font("SansSerif", Font.PLAIN, 12));
 
         DefaultTableModel cartModel = new DefaultTableModel(new Object[]{"Item", "Qty", "Line Total"}, 0);
         cartModel.addRow(new Object[]{"Latte", 2, "$9.00"});
         cartModel.addRow(new Object[]{"Croissant", 1, "$3.00"});
-        cartTable.setModel(cartModel);
-        cartTable.setRowHeight(26);
-        cartTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
-        cartTable.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        cashierTable1.setModel(cartModel);
+        cashierTable1.setRowHeight(26);
+        cashierTable1.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
+        cashierTable1.setFont(new Font("SansSerif", Font.PLAIN, 12));
 
         JPanel totals = new JPanel(new GridBagLayout());
         totals.setOpaque(false);
@@ -407,7 +514,6 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         totals.add(boldLabel("Total"), gbc);
         gbc.gridx = 1;
         totals.add(boldLabel("$12.96"), gbc);
-        cashierCartPanel.add(totals, BorderLayout.NORTH);
 
         JPanel actions = new JPanel();
         actions.setOpaque(false);
@@ -415,16 +521,9 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         JButton clearCart = secondaryButton("Clear Cart");
         actions.add(addToQueue);
         actions.add(clearCart);
-        cashierCartPanel.add(actions, BorderLayout.SOUTH);
 
         JTextArea tip = tipArea("Add validates non-empty cart, inserts orders + items into MySQL, then enqueues if queue not full.");
-        cashierCartPanel.add(tip, BorderLayout.EAST);
 
-        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, cashierMenuPanel, cashierCartPanel);
-        split.setResizeWeight(0.55);
-        cashierPanel.removeAll();
-        cashierPanel.add(split, BorderLayout.CENTER);
-        cashierPanel.add(legendCashierLabel, BorderLayout.SOUTH);
     }
 
     private void populateBaristaPanels() {
@@ -441,44 +540,69 @@ public class RoleFlowFrame extends javax.swing.JFrame {
         baristaTable.setRowHeight(26);
         baristaTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
         baristaTable.setFont(new Font("SansSerif", Font.PLAIN, 12));
-
-        baristaDetailArea.setText("Detail pane shows selected order items, totals, timestamps for prep.");
+        
         baristaDetailArea.setForeground(SOFT_TEXT);
+        baristaDetailScrollPane.setPreferredSize(new Dimension(280, 0));
+//        actionsBaristaPanel.setText("Detail pane shows selected order items, totals, timestamps for prep.");
 
-        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JScrollPane(baristaTable), new JScrollPane(baristaDetailArea));
-        split.setResizeWeight(0.65);
-        split.setBorder(BorderFactory.createEmptyBorder());
-        baristaPanel.remove(baristaSplitContainer);
-        baristaPanel.add(split, BorderLayout.CENTER);
+
+        baristaSplitContainer.setOpaque(false);
+        baristaSplitContainer.setBorder(BorderFactory.createEmptyBorder());
+        baristaSplitContainer.setResizeWeight(0.65);
+        baristaSplitContainer.setDividerLocation(0.6);
+        baristaSplitContainer.setLeftComponent(baristaQueueScrollPane);
+        baristaSplitContainer.setRightComponent(baristaDetailScrollPane);
     }
 
     private void applyRoleVisibility() {
         String normalizedRole = role.toLowerCase();
-        roleTabbedPane.removeAll();
-        switch (normalizedRole) {
-            case "owner" -> {
-                roleTabbedPane.addTab("Owner / Manager", ownerPanel);
-                roleTabbedPane.addTab("Cashier", cashierPanel);
-                roleTabbedPane.addTab("Barista", baristaPanel);
-            }
-            case "manager" -> roleTabbedPane.addTab("Owner / Manager", ownerPanel);
-            case "cashier" -> roleTabbedPane.addTab("Cashier", cashierPanel);
-            case "barista" -> roleTabbedPane.addTab("Barista", baristaPanel);
-            default -> roleTabbedPane.addTab("Role", buildUnknownRolePanel());
+        for (int i = 0; i < roleTabbedPane.getTabCount(); i++) {
+            roleTabbedPane.setEnabledAt(i, true);
+            roleTabbedPane.setComponentAt(i, switch (i) {
+                case 0 -> ownerPanel;
+                case 1 -> cashierPanel;
+                case 2 -> baristaPanel;
+                default -> unknownRolePanel;
+            });
         }
-        revalidate();
-        repaint();
+
+        switch (normalizedRole) {
+            case "owner" -> roleTabbedPane.setSelectedComponent(ownerPanel);
+            case "manager" -> {
+                roleTabbedPane.setSelectedComponent(ownerPanel);
+                disableTabsExcept(ownerPanel);
+            }
+            case "cashier" -> {
+                roleTabbedPane.setSelectedComponent(cashierPanel);
+                disableTabsExcept(cashierPanel);
+            }
+            case "barista" -> {
+                roleTabbedPane.setSelectedComponent(baristaPanel);
+                disableTabsExcept(baristaPanel);
+            }
+            default -> {
+                roleTabbedPane.setSelectedComponent(unknownRolePanel);
+                disableTabsExcept(unknownRolePanel);
+            }
+        }
     }
 
-    private JPanel buildUnknownRolePanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(CARD_COLOR);
-        panel.setBorder(createCardBorder());
+    private void disableTabsExcept(JPanel activePanel) {
+        for (int i = 0; i < roleTabbedPane.getTabCount(); i++) {
+            boolean isActive = roleTabbedPane.getComponentAt(i) == activePanel;
+            roleTabbedPane.setEnabledAt(i, isActive);
+        }
+    }
+
+    private void configureUnknownRolePanel() {
+        unknownRolePanel.removeAll();
+        unknownRolePanel.setLayout(new BorderLayout());
+        unknownRolePanel.setBackground(CARD_COLOR);
+        unknownRolePanel.setBorder(createCardBorder());
         JLabel label = new JLabel("This role is not configured for specific privileges. Please contact an owner.", SwingConstants.CENTER);
         label.setFont(new Font("SansSerif", Font.PLAIN, 14));
         label.setForeground(SOFT_TEXT);
-        panel.add(label, BorderLayout.CENTER);
-        return panel;
+        unknownRolePanel.add(label, BorderLayout.CENTER);
     }
 
     private JButton primaryButton(String text) {
@@ -555,3 +679,10 @@ public class RoleFlowFrame extends javax.swing.JFrame {
                 BorderFactory.createEmptyBorder(10, 10, 10, 10));
     }
 }
+
+
+
+
+
+
+
