@@ -22,174 +22,195 @@ public class LoginFrame extends JFrame {
     private final AssetService assetService = new AssetService();
     private final AuthService authService = new AuthService();
 
-   public LoginFrame() {
-    setTitle("Login");
-    setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+    public LoginFrame() {
+        setTitle("Login");
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-    setExtendedState(JFrame.MAXIMIZED_BOTH);
-    setResizable(true);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+        setResizable(true);
 
-    setContentPane(buildUI());
-    applyBrandingFromDB();
-    wireEvents();
-}
-
+        setContentPane(buildUI());
+        applyBrandingFromDB();
+        wireEvents();
+    }
 
     private JComponent buildUI() {
-        // Root with soft background
+        // Root: full-screen soft background, center the card.
         JPanel root = new JPanel(new GridBagLayout());
         root.setBackground(new Color(245, 247, 250));
 
-        ModernCard card = new ModernCard();
-        card.setPreferredSize(new Dimension(570, 720));
+        ModernCard card = new ModernCard(22);
         card.setLayout(new BorderLayout());
+        card.setPreferredSize(new Dimension(520, 560));
 
-        // Header (gradient) + logo + shop name
-        HeaderPanel header = new HeaderPanel();
-        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+        // Header
+        HeaderPanel header = new HeaderPanel(22);
+        header.setLayout(new GridBagLayout());
         header.setBorder(new EmptyBorder(22, 22, 18, 22));
 
-        lblLogo.setAlignmentX(Component.CENTER_ALIGNMENT);
-        lblLogo.setPreferredSize(new Dimension(84, 84));
-        lblLogo.setMinimumSize(new Dimension(84, 84));
-        lblLogo.setMaximumSize(new Dimension(84, 84));
+        GridBagConstraints h = new GridBagConstraints();
+        h.gridx = 0;
+        h.weightx = 1;
+        h.fill = GridBagConstraints.HORIZONTAL;
 
-        lblShopName.setAlignmentX(Component.CENTER_ALIGNMENT);
-        lblShopName.setFont(new Font("SansSerif", Font.BOLD, 20));
+        lblLogo.setHorizontalAlignment(SwingConstants.CENTER);
+        lblLogo.setPreferredSize(new Dimension(84, 84));
+
+        lblShopName.setHorizontalAlignment(SwingConstants.CENTER);
+        lblShopName.setFont(new Font("SansSerif", Font.BOLD, 22));
         lblShopName.setForeground(Color.WHITE);
 
-        JLabel lblSubtitle = new JLabel("Staff Login");
-        lblSubtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel lblSubtitle = new JLabel("Staff Login", SwingConstants.CENTER);
         lblSubtitle.setFont(new Font("SansSerif", Font.PLAIN, 12));
         lblSubtitle.setForeground(new Color(235, 238, 242));
 
-        header.add(lblLogo);
-        header.add(Box.createVerticalStrut(10));
-        header.add(lblShopName);
-        header.add(Box.createVerticalStrut(4));
-        header.add(lblSubtitle);
+        h.gridy = 0;
+        header.add(lblLogo, h);
+        h.gridy = 1;
+        h.insets = new Insets(10, 0, 0, 0);
+        header.add(lblShopName, h);
+        h.gridy = 2;
+        h.insets = new Insets(4, 0, 0, 0);
+        header.add(lblSubtitle, h);
 
-        // Body (form)
-        JPanel body = new JPanel();
+        // Body
+        JPanel body = new JPanel(new GridBagLayout());
         body.setOpaque(false);
-        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-        body.setBorder(new EmptyBorder(10, 10, 10, 10));
+        body.setBorder(new EmptyBorder(20, 26, 22, 26));
+
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0;
+        c.weightx = 1;
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.anchor = GridBagConstraints.NORTHWEST;
 
         JLabel lblWelcome = new JLabel("Welcome back");
-        lblWelcome.setFont(new Font("SansSerif", Font.BOLD, 16));
+        lblWelcome.setFont(new Font("SansSerif", Font.BOLD, 18));
         lblWelcome.setForeground(new Color(33, 37, 41));
-        lblWelcome.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel lblHint = new JLabel("Please sign in to continue.");
         lblHint.setFont(new Font("SansSerif", Font.PLAIN, 12));
         lblHint.setForeground(new Color(108, 117, 125));
-        lblHint.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        body.add(lblWelcome);
-        body.add(Box.createVerticalStrut(2));
-        body.add(lblHint);
-        body.add(Box.createVerticalStrut(16));
+        c.gridy = 0;
+        c.insets = new Insets(0, 0, 2, 0);
+        body.add(lblWelcome, c);
 
-        // Fields
-    
-        body.add(fieldBlock("Username", txtUsername, "Enter your username"));
-        body.add(Box.createVerticalStrut(12));
-        body.add(fieldBlock("Password", txtPassword, "Enter your password"));
-        txtUsername.setMaximumSize(new Dimension(Integer.MAX_VALUE, 440));
-        txtPassword.setMaximumSize(new Dimension(Integer.MAX_VALUE, 440));
-        body.add(Box.createVerticalStrut(10));
+        c.gridy = 1;
+        c.insets = new Insets(0, 0, 16, 0);
+        body.add(lblHint, c);
 
-        // Show password (modern style)
+        // Username row
+        c.gridy = 2;
+        c.insets = new Insets(0, 0, 12, 0);
+        body.add(labeledField("Username", txtUsername, "Enter your username"), c);
+
+        // Password row
+        c.gridy = 3;
+        c.insets = new Insets(0, 0, 8, 0);
+        body.add(labeledField("Password", txtPassword, "Enter your password"), c);
+
+        // Show password
         chkShow.setOpaque(false);
         chkShow.setFont(new Font("SansSerif", Font.PLAIN, 12));
         chkShow.setForeground(new Color(73, 80, 87));
-        chkShow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        body.add(chkShow);
 
-        body.add(Box.createVerticalStrut(16));
+        c.gridy = 4;
+        c.insets = new Insets(0, 0, 16, 0);
+        body.add(chkShow, c);
 
-        // Button (primary)
-        btnLogin.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btnLogin.setFocusPainted(false);
-        btnLogin.setFont(new Font("SansSerif", Font.BOLD, 14));
-        btnLogin.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btnLogin.setBackground(new Color(32, 85, 197));
-        btnLogin.setForeground(Color.WHITE);
-        btnLogin.setOpaque(true);
-        btnLogin.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        // Button row (fills width, hugs height)
+        stylePrimaryButton(btnLogin);
+        btnLogin.setPreferredSize(new Dimension(10, 44)); // height; width ignored by layout
 
-        // Make it fill width
-        JPanel btnWrap = new JPanel(new BorderLayout());
-        btnWrap.setOpaque(false);
-        btnWrap.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btnWrap.add(btnLogin, BorderLayout.CENTER);
+        c.gridy = 5;
+        c.insets = new Insets(0, 0, 12, 0);
+        body.add(btnLogin, c);
 
-        body.add(btnWrap);
-
-
-        body.add(Box.createVerticalStrut(12));
-
-        // Status label
+        // Status
         lblStatus.setFont(new Font("SansSerif", Font.PLAIN, 12));
         lblStatus.setForeground(new Color(220, 53, 69));
-        lblStatus.setAlignmentX(Component.LEFT_ALIGNMENT);
-        body.add(lblStatus);
+
+        c.gridy = 6;
+        c.insets = new Insets(0, 0, 0, 0);
+        body.add(lblStatus, c);
+
+        // Push everything to top (so it doesn't float weirdly when card height grows)
+        c.gridy = 7;
+        c.weighty = 1;
+        body.add(Box.createVerticalGlue(), c);
 
         card.add(header, BorderLayout.NORTH);
         card.add(body, BorderLayout.CENTER);
 
-        root.add(card);
+        GridBagConstraints r = new GridBagConstraints();
+        r.gridx = 0;
+        r.gridy = 0;
+        r.insets = new Insets(24, 24, 24, 24);
+        root.add(card, r);
+
         return root;
     }
 
-    private JPanel fieldBlock(String label, JComponent field, String tooltip) {
-        JPanel p = new JPanel();
+    private JPanel labeledField(String label, JComponent field, String tooltip) {
+        JPanel p = new JPanel(new GridBagLayout());
         p.setOpaque(false);
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel l = new JLabel(label);
         l.setFont(new Font("SansSerif", Font.PLAIN, 12));
         l.setForeground(new Color(73, 80, 87));
-        l.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         field.setToolTipText(tooltip);
         field.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+        field.setPreferredSize(new Dimension(10, 44)); // height; width handled by layout
+        setFieldBorder(field, false);
 
-        // Modern field border
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(222, 226, 230), 1),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
-
-        // Focus glow (simple)
         field.addFocusListener(new FocusAdapter() {
-            @Override public void focusGained(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(32, 85, 197), 2),
-                        BorderFactory.createEmptyBorder(9, 11, 9, 11)
-                ));
-            }
-            @Override public void focusLost(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(222, 226, 230), 1),
-                        BorderFactory.createEmptyBorder(10, 12, 10, 12)
-                ));
-            }
+            @Override public void focusGained(FocusEvent e) { setFieldBorder(field, true); }
+            @Override public void focusLost(FocusEvent e)  { setFieldBorder(field, false); }
         });
 
-        p.add(l);
-        p.add(Box.createVerticalStrut(6));
-        p.add(field);
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridx = 0;
+        g.weightx = 1;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.anchor = GridBagConstraints.WEST;
+
+        g.gridy = 0;
+        g.insets = new Insets(0, 0, 6, 0);
+        p.add(l, g);
+
+        g.gridy = 1;
+        g.insets = new Insets(0, 0, 0, 0);
+        p.add(field, g);
+
         return p;
     }
 
+    private void setFieldBorder(JComponent field, boolean focused) {
+        Color line = focused ? new Color(32, 85, 197) : new Color(222, 226, 230);
+        int thickness = focused ? 2 : 1;
+        int pad = focused ? 9 : 10;
+
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(line, thickness),
+                BorderFactory.createEmptyBorder(pad, 12, pad, 12)
+        ));
+    }
+
+    private void stylePrimaryButton(JButton b) {
+        b.setFocusPainted(false);
+        b.setFont(new Font("SansSerif", Font.BOLD, 14));
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.setBackground(new Color(32, 85, 197));
+        b.setForeground(Color.WHITE);
+        b.setOpaque(true);
+        b.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14)); // hug content visually
+    }
+
     private void applyBrandingFromDB() {
-        // Shop Name (fallback)
         lblShopName.setText(assetService.getShopNameOrDefault());
 
-        // Logo (fallback to a simple UI icon)
         ImageIcon logo = assetService.getShopLogoOrNull(84);
         if (logo != null) {
             lblLogo.setIcon(logo);
@@ -200,9 +221,10 @@ public class LoginFrame extends JFrame {
     }
 
     private void wireEvents() {
+        // If you previously changed echo char, you can store it; this is fine for most UIs.
         chkShow.addActionListener(e -> txtPassword.setEchoChar(chkShow.isSelected() ? (char) 0 : '•'));
-        btnLogin.addActionListener(e -> doLogin());
 
+        btnLogin.addActionListener(e -> doLogin());
         txtUsername.addActionListener(e -> txtPassword.requestFocusInWindow());
         txtPassword.addActionListener(e -> doLogin());
     }
@@ -223,6 +245,15 @@ public class LoginFrame extends JFrame {
             lblStatus.setText(result.message);
             return;
         }
+if ("OWNER".equalsIgnoreCase(result.role)) {
+    new OwnerFrame(user).setVisible(true);
+    dispose();
+    return;
+}
+
+// Later:
+// else if CASHIER -> open CashierFrame
+// else if BARISTA -> open BaristaFrame
 
         JOptionPane.showMessageDialog(this,
                 "Welcome, " + user + " (" + result.role + ")",
@@ -231,15 +262,19 @@ public class LoginFrame extends JFrame {
 
         // TODO: open role frame then dispose
         // new OwnerFrame().setVisible(true); dispose();
+        
     }
 
-    // ---------- Modern UI helper panels ----------
+    // ---------- UI helper panels ----------
 
-    /** Rounded card with a soft shadow. */
+    /** Rounded card with a soft shadow (correct painting, no setBounds hacks). */
     static class ModernCard extends JPanel {
-        ModernCard() {
+        private final int arc;
+
+        ModernCard(int arc) {
+            this.arc = arc;
             setOpaque(false);
-            setBorder(new EmptyBorder(14, 14, 14, 14));
+            setBorder(new EmptyBorder(0, 0, 0, 0));
         }
 
         @Override
@@ -247,32 +282,34 @@ public class LoginFrame extends JFrame {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            int arc = 22;
+            int w = getWidth();
+            int h = getHeight();
 
             // Shadow
             g2.setColor(new Color(0, 0, 0, 22));
-            g2.fillRoundRect(8, 8, getWidth() - 16, getHeight() - 16, arc, arc);
+            g2.fillRoundRect(10, 10, w - 20, h - 20, arc, arc);
 
             // Card
             g2.setColor(Color.WHITE);
-            g2.fillRoundRect(0, 0, getWidth() - 16, getHeight() - 16, arc, arc);
+            g2.fillRoundRect(0, 0, w - 20, h - 20, arc, arc);
 
             g2.dispose();
-
-            // Layout children inside the “card area”
-            setBounds(getX(), getY(), getWidth(), getHeight());
             super.paintComponent(g);
         }
 
         @Override
         public Insets getInsets() {
-            return new Insets(0, 0, 16, 16); // keep children inside white area
+            // Keep children inside the WHITE card area (since we draw it smaller)
+            return new Insets(0, 0, 20, 20);
         }
     }
 
-    /** Gradient header bar. */
+    /** Gradient header bar that matches the card arc. */
     static class HeaderPanel extends JPanel {
-        HeaderPanel() {
+        private final int arc;
+
+        HeaderPanel(int arc) {
+            this.arc = arc;
             setOpaque(false);
         }
 
@@ -281,17 +318,17 @@ public class LoginFrame extends JFrame {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            int arc = 22;
             int w = getWidth();
             int h = getHeight();
 
-            // Gradient (top-left to bottom-right)
             GradientPaint gp = new GradientPaint(
                     0, 0, new Color(32, 85, 197),
                     w, h, new Color(18, 54, 120)
             );
             g2.setPaint(gp);
-            g2.fillRoundRect(0, 0, w, h + 20, arc, arc);
+
+            // draw slightly taller so the bottom looks smooth
+            g2.fillRoundRect(0, 0, w, h + 24, arc, arc);
 
             g2.dispose();
             super.paintComponent(g);
