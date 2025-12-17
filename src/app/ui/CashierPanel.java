@@ -1,7 +1,13 @@
 package app.ui;
 
 import app.db.MenuItemDAO;
+import app.db.OrderDAO;
 import app.model.MenuItem;
+import app.model.Order;
+import app.model.OrderItem;
+import app.model.OrderQueue;
+import app.util.LinearSearch;
+import app.util.SelectionSort;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -36,16 +42,22 @@ public class CashierPanel extends JPanel {
     private JTable cartTable;
 
     private final DefaultListModel<String> queueModel = new DefaultListModel<>();
+    private final OrderQueue orderQueue = new OrderQueue();
     private JLabel lblSubtotal;
     private JLabel lblTax;
     private JLabel lblTotal;
     private JLabel lblQueueCount;
     private JLabel lblStatus;
     private JTextArea receiptArea;
+    private JTextField customerField;
+    private JTextField orderSearchField;
+    private JTextField orderCodeSearchField;
+    private JComboBox<String> menuSortMode;
 
     private int orderCounter = 1000;
 
     private final MenuItemDAO menuItemDAO = new MenuItemDAO();
+    private final OrderDAO orderDAO = new OrderDAO();
     private final Set<String> customizableCategories = Set.of("Coffee", "Tea", "Iced");
 
     private static final Color BG = new Color(245, 247, 250);
@@ -70,6 +82,8 @@ public class CashierPanel extends JPanel {
         loadMenuFromDatabaseOrFallback();
         add(buildHeader(), BorderLayout.NORTH);
         add(buildWorkspace(), BorderLayout.CENTER);
+
+        loadActiveQueueFromDatabase();
     }
 
     // -------------------- Header --------------------
@@ -127,6 +141,11 @@ public class CashierPanel extends JPanel {
         search.setToolTipText("Search menu items");
         styleField(search);
 
+        menuSortMode = new JComboBox<>(new String[]{"Name (A-Z)", "Price (Low-High)"});
+        menuSortMode.setToolTipText("Selection sort: name or price");
+        styleField(menuSortMode);
+        menuSortMode.addActionListener(e -> filterMenu(search.getText()));
+
         search.getDocument().addDocumentListener(new DocumentListener() {
             @Override public void insertUpdate(DocumentEvent e) { filterMenu(search.getText()); }
             @Override public void removeUpdate(DocumentEvent e) { filterMenu(search.getText()); }
@@ -139,6 +158,8 @@ public class CashierPanel extends JPanel {
         menuHeader.add(menuTitle);
         menuHeader.add(Box.createVerticalStrut(8));
         menuHeader.add(search);
+        menuHeader.add(Box.createVerticalStrut(6));
+        menuHeader.add(menuSortMode);
 
         JList<MenuItem> menuList = new JList<>(menuModel);
         menuList.setCellRenderer(new MenuItemRenderer());
@@ -213,8 +234,15 @@ public class CashierPanel extends JPanel {
         JPanel cartFooter = new JPanel();
         cartFooter.setLayout(new BoxLayout(cartFooter, BoxLayout.Y_AXIS));
         cartFooter.setOpaque(false);
+        customerField = new JTextField();
+        customerField.setToolTipText("Capture customer for receipts/search");
+        styleField(customerField);
+        JPanel customerBox = labeled("Customer Name (optional)", customerField);
+        customerBox.setAlignmentX(Component.LEFT_ALIGNMENT);
         totals.setAlignmentX(Component.LEFT_ALIGNMENT);
         cartActions.setAlignmentX(Component.LEFT_ALIGNMENT);
+        cartFooter.add(customerBox);
+        cartFooter.add(Box.createVerticalStrut(8));
         cartFooter.add(totals);
         cartFooter.add(Box.createVerticalStrut(10));
         cartFooter.add(cartActions);
@@ -230,7 +258,7 @@ public class CashierPanel extends JPanel {
 
         JPanel queuePanel = surface(new EmptyBorder(14, 14, 14, 14));
         queuePanel.setLayout(new BorderLayout(8, 8));
-        queuePanel.setPreferredSize(new Dimension(10, 240));
+        queuePanel.setPreferredSize(new Dimension(10, 540));
 
         JPanel queueHeader = new JPanel(new BorderLayout());
         queueHeader.setOpaque(false);
@@ -243,6 +271,46 @@ public class CashierPanel extends JPanel {
         queueHeader.add(queueTitle, BorderLayout.WEST);
         queueHeader.add(lblQueueCount, BorderLayout.EAST);
 
+        orderSearchField = new JTextField();
+        orderSearchField.setToolTipText("Linear search by customer name");
+        styleField(orderSearchField);
+
+        orderCodeSearchField = new JTextField();
+        orderCodeSearchField.setToolTipText("Optional order # / code filter");
+        styleField(orderCodeSearchField);
+
+        JPanel queueSearchRow = new JPanel(new GridLayout(2, 2, 8, 6));
+        queueSearchRow.setOpaque(false);
+        JLabel lblCust = new JLabel("Customer contains");
+        lblCust.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        lblCust.setForeground(MUTED);
+        JLabel lblId = new JLabel("Order # (optional)");
+        lblId.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        lblId.setForeground(MUTED);
+        queueSearchRow.add(lblCust);
+        queueSearchRow.add(lblId);
+        queueSearchRow.add(orderSearchField);
+        queueSearchRow.add(orderCodeSearchField);
+
+        JButton btnSearchQueue = ghost("Search Orders");
+        btnSearchQueue.addActionListener(e -> searchActiveOrders());
+        JButton btnResetQueue = ghost("Reset Queue");
+        btnResetQueue.addActionListener(e -> refreshQueueList());
+
+        JPanel queueSearchButtons = new JPanel(new GridLayout(1, 2, 8, 8));
+        queueSearchButtons.setOpaque(false);
+        queueSearchButtons.add(btnSearchQueue);
+        queueSearchButtons.add(btnResetQueue);
+
+        JPanel queueHeaderWrap = new JPanel();
+        queueHeaderWrap.setOpaque(false);
+        queueHeaderWrap.setLayout(new BoxLayout(queueHeaderWrap, BoxLayout.Y_AXIS));
+        queueHeaderWrap.add(queueHeader);
+        queueHeaderWrap.add(Box.createVerticalStrut(8));
+        queueHeaderWrap.add(queueSearchRow);
+        queueHeaderWrap.add(Box.createVerticalStrut(6));
+        queueHeaderWrap.add(queueSearchButtons);
+
         JList<String> queueList = new JList<>(queueModel);
         queueList.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
         JScrollPane queueScroll = new JScrollPane(queueList);
@@ -251,7 +319,7 @@ public class CashierPanel extends JPanel {
         JButton btnServe = ghost("Serve Next");
         btnServe.addActionListener(e -> serveNext());
 
-        queuePanel.add(queueHeader, BorderLayout.NORTH);
+        queuePanel.add(queueHeaderWrap, BorderLayout.NORTH);
         queuePanel.add(queueScroll, BorderLayout.CENTER);
         queuePanel.add(btnServe, BorderLayout.SOUTH);
 
@@ -378,36 +446,126 @@ public class CashierPanel extends JPanel {
             setStatus("Add at least one item to checkout.", WARN);
             return;
         }
-        if (queueModel.size() >= 50) {
+
+        if (orderQueue.size() >= OrderQueue.MAX_SIZE) {
             setStatus("Queue full (50). Serve some orders first.", WARN);
             return;
         }
 
-        double subtotal = cart.stream().mapToDouble(c -> priceWithOptions(c.item, c.options) * c.qty).sum();
-        double tax = subtotal * 0.12;
-        double total = subtotal + tax;
+        double subtotalVal = cart.stream().mapToDouble(c -> priceWithOptions(c.item, c.options) * c.qty).sum();
+        double taxVal = subtotalVal * 0.12;
+        double totalVal = subtotalVal + taxVal;
 
-        orderCounter++;
-        String orderCode = "#" + orderCounter;
-        String note = previewMode ? " (preview)" : "";
-        queueModel.addElement(orderCode + " • " + MONEY_PH.format(total) + " • " + cart.size() + " items" + note);
-        updateQueueBadge();
+        Order order = new Order();
+        order.setCode(generateOrderCode());
+        order.setCustomerName(customerField.getText().isBlank() ? "Walk-in" : customerField.getText().trim());
+        order.setSubtotal(BigDecimal.valueOf(subtotalVal));
+        order.setTax(BigDecimal.valueOf(taxVal));
+        order.setTotal(BigDecimal.valueOf(totalVal));
+        order.setStatus("PENDING");
+        order.setPaid(false);
 
-        renderReceipt(orderCode, subtotal, tax, total);
+        for (CartLine line : cart) {
+            OrderItem item = new OrderItem();
+            item.setItemCode(line.item.getCode());
+            item.setItemName(line.item.getName());
+            item.setOptionsLabel(line.options.label());
+            item.setQuantity(line.qty);
+            BigDecimal unit = BigDecimal.valueOf(priceWithOptions(line.item, line.options));
+            item.setUnitPrice(unit);
+            item.setLineTotal(unit.multiply(BigDecimal.valueOf(line.qty)));
+            order.addItem(item);
+        }
+
+        boolean dbOk = true;
+        if (!previewMode) {
+            try {
+                orderDAO.insertOrderWithItems(order);
+            } catch (Exception ex) {
+                dbOk = false;
+                setStatus("DB issue while saving order: " + ex.getMessage() + " (queued locally)", WARN);
+            }
+        }
+
+        boolean accepted = orderQueue.enqueue(order);
+        if (!accepted) {
+            setStatus("Queue full (50). Serve some orders first.", WARN);
+            return;
+        }
+
+        refreshQueueList();
+        renderReceipt(order);
         cart.clear();
         refreshCartTable();
-        setStatus((previewMode ? "Preview: " : "") + "Queued order " + orderCode, SUCCESS);
+        setStatus((previewMode ? "Preview: " : "") + "Queued order " + order.getCode() + (dbOk ? "" : " (not saved to DB)"), dbOk ? SUCCESS : WARN);
     }
 
     private void serveNext() {
-        if (queueModel.isEmpty()) {
+        if (orderQueue.isEmpty()) {
             setStatus("No orders in queue", WARN);
             return;
         }
-        String served = queueModel.get(0);
-        queueModel.removeElementAt(0);
-        updateQueueBadge();
-        setStatus("Served " + served, SUCCESS);
+        Order next = orderQueue.peek();
+        if (!previewMode && next.getId() != null) {
+            try {
+                orderDAO.updateStatusToCompleted(next.getId());
+                next.setStatus("COMPLETED");
+                next.setPaid(true);
+            } catch (Exception ex) {
+                setStatus("DB error while marking order complete: " + ex.getMessage(), WARN);
+            }
+        }
+
+        orderQueue.dequeue();
+        refreshQueueList();
+        setStatus("Served " + next.getCode(), SUCCESS);
+    }
+
+    private void searchActiveOrders() {
+        String customerQ = orderSearchField.getText() == null ? "" : orderSearchField.getText();
+        String codeQ = orderCodeSearchField.getText() == null ? "" : orderCodeSearchField.getText();
+        // Linear search entry point for active orders in the queue
+        List<Order> matches = LinearSearch.search(orderQueue.traverse(), o ->
+                o.getCustomerName().toLowerCase(Locale.ROOT).contains(customerQ.trim().toLowerCase(Locale.ROOT))
+                        && (codeQ.isBlank() || (o.getCode() != null && o.getCode().toLowerCase(Locale.ROOT).contains(codeQ.trim().toLowerCase(Locale.ROOT))))
+        );
+
+        List<Order> historyMatches = new ArrayList<>();
+        if (!previewMode) {
+            try {
+                List<Order> historySource = orderDAO.searchOrders(customerQ.trim(), codeQ.trim(), 50);
+                // Linear search entry point for order history (DB-backed)
+                historyMatches = LinearSearch.search(historySource, o ->
+                        o.getCustomerName().toLowerCase(Locale.ROOT).contains(customerQ.trim().toLowerCase(Locale.ROOT))
+                                && (codeQ.isBlank() || (o.getCode() != null && o.getCode().toLowerCase(Locale.ROOT).contains(codeQ.trim().toLowerCase(Locale.ROOT))))
+                );
+            } catch (Exception ex) {
+                setStatus("DB search unavailable: " + ex.getMessage(), WARN);
+            }
+        }
+
+        boolean any = false;
+        if (!matches.isEmpty()) {
+            rebuildQueueList(matches);
+            setStatus("Found " + matches.size() + " matching active order(s)", PRIMARY);
+            any = true;
+        }
+
+        if (!historyMatches.isEmpty()) {
+            any = true;
+            StringBuilder sb = new StringBuilder();
+            sb.append("History results (latest first):\n");
+            for (int i = 0; i < Math.min(historyMatches.size(), 5); i++) {
+                Order o = historyMatches.get(i);
+                sb.append(o.getCode()).append(" • ").append(o.getCustomerName()).append(" • ")
+                        .append(MONEY_PH.format(o.getTotal())).append(" • ").append(o.getStatus()).append("\n");
+            }
+            JOptionPane.showMessageDialog(this, sb.toString(), "Order history", JOptionPane.INFORMATION_MESSAGE);
+        }
+
+        if (!any) {
+            setStatus("No matching active orders or history.", WARN);
+        }
     }
 
     // -------------------- UI updates --------------------
@@ -435,20 +593,44 @@ public class CashierPanel extends JPanel {
         lblTotal.setText(MONEY_PH.format(total));
     }
 
-    private void renderReceipt(String orderCode, double subtotal, double tax, double total) {
+    private void refreshQueueList() {
+        rebuildQueueList(orderQueue.traverse());
+    }
+
+    private void rebuildQueueList(List<Order> orders) {
+        queueModel.clear();
+        for (Order o : orders) {
+            queueModel.addElement(formatQueueLine(o));
+        }
+        updateQueueBadge();
+    }
+
+    private String formatQueueLine(Order order) {
+        String code = order.getCode() == null ? "Order" : order.getCode();
+        String status = order.getStatus() == null ? "PENDING" : order.getStatus();
+        return code + " • " + order.getCustomerName() + " • " + MONEY_PH.format(order.getTotal()) + " • " + status;
+    }
+
+    private void renderReceipt(Order order) {
         StringBuilder sb = new StringBuilder();
         sb.append(shopName).append("\n");
-        sb.append("Order ").append(orderCode).append("\n");
+        sb.append("Order ").append(order.getCode());
+        if (order.getId() != null) sb.append(" (ID ").append(order.getId()).append(")");
+        sb.append("\n");
+        sb.append("Customer: ").append(order.getCustomerName()).append("\n");
         sb.append("Cashier: ").append(username).append("\n");
+        sb.append("Status: ").append(order.getStatus()).append("\n");
         sb.append("---------------------------\n");
-        for (CartLine line : cart) {
-            sb.append(String.format("%-16s x%-2d %8s\n", line.item.getName(), line.qty, MONEY_PH.format(priceWithOptions(line.item, line.options) * line.qty)));
-            sb.append("   -> ").append(line.options.label()).append("\n");
+        for (OrderItem item : order.getItems()) {
+            sb.append(String.format("%-16s x%-2d %8s\n", item.getItemName(), item.getQuantity(), MONEY_PH.format(item.getLineTotal())));
+            if (!item.getOptionsLabel().isEmpty()) {
+                sb.append("   -> ").append(item.getOptionsLabel()).append("\n");
+            }
         }
         sb.append("---------------------------\n");
-        sb.append(String.format("Subtotal: %s\n", MONEY_PH.format(subtotal)));
-        sb.append(String.format("VAT (12%%): %s\n", MONEY_PH.format(tax)));
-        sb.append(String.format("TOTAL: %s\n", MONEY_PH.format(total)));
+        sb.append(String.format("Subtotal: %s\n", MONEY_PH.format(order.getSubtotal())));
+        sb.append(String.format("VAT (12%%): %s\n", MONEY_PH.format(order.getTax())));
+        sb.append(String.format("TOTAL: %s\n", MONEY_PH.format(order.getTotal())));
         sb.append("Thank you!\n");
         receiptArea.setText(sb.toString());
     }
@@ -526,8 +708,24 @@ public class CashierPanel extends JPanel {
         return price;
     }
 
+    private String generateOrderCode() {
+        orderCounter++;
+        return "#" + orderCounter;
+    }
+
+    private void bumpOrderCounter(Order order) {
+        try {
+            if (order.getCode() != null && order.getCode().startsWith("#")) {
+                int parsed = Integer.parseInt(order.getCode().replace("#", "").trim());
+                orderCounter = Math.max(orderCounter, parsed);
+            }
+        } catch (NumberFormatException ignored) {
+            // keep existing counter when code is non-numeric
+        }
+    }
+
     private void updateQueueBadge() {
-        lblQueueCount.setText(queueModel.size() + " in queue");
+        lblQueueCount.setText(orderQueue.size() + " in queue");
     }
 
     private JLabel totalRow(JPanel parent, GridBagConstraints g, int y, String label) {
@@ -551,11 +749,17 @@ public class CashierPanel extends JPanel {
 
     private void filterMenu(String q) {
         menuModel.clear();
-        String query = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
-        allMenuItems.stream()
-                .filter(m -> m.getName().toLowerCase(Locale.ROOT).contains(query) || m.getCategory().toLowerCase(Locale.ROOT).contains(query))
-                .sorted(Comparator.comparing((MenuItem m) -> m.getCategory()).thenComparing(MenuItem::getName))
-                .forEach(menuModel::addElement);
+        // Linear search entry point for the menu filter
+        List<MenuItem> results = LinearSearch.searchMenuByName(allMenuItems, q);
+        String mode = menuSortMode == null ? "Name (A-Z)" : String.valueOf(menuSortMode.getSelectedItem());
+        if ("Price (Low-High)".equals(mode)) {
+            SelectionSort.sort(results, Comparator.comparing(MenuItem::getPrice)); // selection sort entry point for menu price
+        } else {
+            SelectionSort.sort(results, Comparator.comparing(MenuItem::getName)); // selection sort entry point for menu names
+        }
+        for (MenuItem m : results) {
+            menuModel.addElement(m);
+        }
     }
 
     private void setStatus(String text, Color color) {
@@ -583,6 +787,28 @@ public class CashierPanel extends JPanel {
             allMenuItems.add(new MenuItem("PA001", "Blueberry Muffin", "Pastry", new BigDecimal("85")));
             allMenuItems.add(new MenuItem("FD001", "Breakfast Sandwich", "Food", new BigDecimal("185")));
             setStatus("Loaded fallback menu (DB unavailable)", WARN);
+        }
+    }
+
+    private void loadActiveQueueFromDatabase() {
+        if (previewMode) {
+            refreshQueueList();
+            return;
+        }
+        try {
+            List<Order> active = orderDAO.loadActiveOrders(OrderQueue.MAX_SIZE);
+            for (Order order : active) {
+                if (orderQueue.enqueue(order)) {
+                    bumpOrderCounter(order);
+                }
+            }
+            refreshQueueList();
+            if (!active.isEmpty()) {
+                setStatus("Loaded active orders from DB", PRIMARY);
+            }
+        } catch (Exception ex) {
+            refreshQueueList();
+            setStatus("Queue fallback (DB unavailable): " + ex.getMessage(), WARN);
         }
     }
 

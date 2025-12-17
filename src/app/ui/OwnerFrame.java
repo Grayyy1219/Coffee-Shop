@@ -6,12 +6,14 @@ import app.db.UserDAO;
 import app.model.DailySalesRow;
 import app.model.DashboardSummary;
 import app.model.User;
+import app.util.SelectionSort;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.text.NumberFormat;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
@@ -45,6 +47,7 @@ public class OwnerFrame extends JFrame {
     private JLabel lblCompletedToday;
     private JLabel lblTotalUsers;
     private DefaultTableModel dailySalesModel;
+    private JComboBox<String> salesSortMode;
 
     private final NumberFormat moneyPH = NumberFormat.getCurrencyInstance(new Locale("en", "PH"));
 
@@ -249,6 +252,15 @@ public class OwnerFrame extends JFrame {
         t.setFont(new Font("SansSerif", Font.BOLD, 14));
         t.setForeground(TEXT);
 
+        salesSortMode = new JComboBox<>(new String[]{"Date (Newest)", "Total (High to Low)"});
+        styleField(salesSortMode);
+        salesSortMode.addActionListener(e -> refreshDashboardSafe());
+
+        JPanel salesHeader = new JPanel(new BorderLayout());
+        salesHeader.setOpaque(false);
+        salesHeader.add(t, BorderLayout.WEST);
+        salesHeader.add(salesSortMode, BorderLayout.EAST);
+
         dailySalesModel = new DefaultTableModel(new String[]{"Date", "Gross", "Paid", "Orders"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -260,7 +272,7 @@ public class OwnerFrame extends JFrame {
         JScrollPane sp = new JScrollPane(table);
         sp.setBorder(BorderFactory.createLineBorder(BORDER, 1));
 
-        tableBox.add(t, BorderLayout.NORTH);
+        tableBox.add(salesHeader, BorderLayout.NORTH);
         tableBox.add(sp, BorderLayout.CENTER);
 
         JPanel center = new JPanel(new BorderLayout(12, 12));
@@ -292,6 +304,16 @@ public class OwnerFrame extends JFrame {
         if (dailySalesModel != null) {
             dailySalesModel.setRowCount(0);
             List<DailySalesRow> rows = dashboardDAO.loadRecentDailySales(14);
+            if (salesSortMode != null) {
+                String mode = String.valueOf(salesSortMode.getSelectedItem());
+                Comparator<DailySalesRow> comparator;
+                if ("Total (High to Low)".equals(mode)) {
+                    comparator = (a, b) -> b.paidTotal.compareTo(a.paidTotal);
+                } else {
+                    comparator = (a, b) -> b.saleDate.compareTo(a.saleDate);
+                }
+                SelectionSort.sort(rows, comparator); // selection sort entry point for sales rows
+            }
             for (DailySalesRow r : rows) {
                 dailySalesModel.addRow(new Object[]{
                         r.saleDate,
