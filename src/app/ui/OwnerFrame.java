@@ -1,12 +1,18 @@
 package app.ui;
 
+import app.db.DashboardDAO;
 import app.db.UserDAO;
+import app.model.DailySalesRow;
+import app.model.DashboardSummary;
 import app.model.User;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.text.NumberFormat;
+import java.util.List;
+import java.util.Locale;
 
 public class OwnerFrame extends JFrame {
 
@@ -19,10 +25,11 @@ public class OwnerFrame extends JFrame {
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel content = new JPanel(cardLayout);
 
-    // DB
+    // DAOs
     private final UserDAO userDAO = new UserDAO();
+    private final DashboardDAO dashboardDAO = new DashboardDAO();
 
-    // Users page components
+    // USERS: table + form
     private DefaultTableModel usersModel;
     private JTable usersTable;
     private JTextField fId;
@@ -30,6 +37,15 @@ public class OwnerFrame extends JFrame {
     private JPasswordField fPass;
     private JComboBox<String> fRole;
     private JLabel usersHint;
+
+    // DASHBOARD: metric labels + table
+    private JLabel lblTodaySales;
+    private JLabel lblOrdersQueue;
+    private JLabel lblCompletedToday;
+    private JLabel lblTotalUsers;
+    private DefaultTableModel dailySalesModel;
+
+    private final NumberFormat moneyPH = NumberFormat.getCurrencyInstance(new Locale("en", "PH"));
 
     // Theme
     private static final Color BG = new Color(245, 247, 250);
@@ -46,7 +62,12 @@ public class OwnerFrame extends JFrame {
         setExtendedState(JFrame.MAXIMIZED_BOTH);
 
         setContentPane(buildUI(ownerUsername));
-        SwingUtilities.invokeLater(this::refreshUsersTableSafe); // load after UI is visible
+
+        // Load data after UI mounts
+        SwingUtilities.invokeLater(() -> {
+            refreshDashboardSafe();
+            refreshUsersTableSafe();
+        });
     }
 
     private JComponent buildUI(String ownerUsername) {
@@ -78,7 +99,7 @@ public class OwnerFrame extends JFrame {
         title.setFont(new Font("SansSerif", Font.BOLD, 18));
         title.setForeground(TEXT);
 
-        JLabel subtitle = new JLabel("Manage users, preview staff roles, and view shop status.");
+        JLabel subtitle = new JLabel("Dashboard overview, user management, and role previews.");
         subtitle.setFont(new Font("SansSerif", Font.PLAIN, 12));
         subtitle.setForeground(MUTED);
 
@@ -86,18 +107,12 @@ public class OwnerFrame extends JFrame {
         left.add(Box.createVerticalStrut(2));
         left.add(subtitle);
 
-        JPanel right = new JPanel();
-        right.setOpaque(false);
-        right.setLayout(new BoxLayout(right, BoxLayout.X_AXIS));
-
         JLabel user = new JLabel("Logged in as: " + ownerUsername);
         user.setFont(new Font("SansSerif", Font.PLAIN, 12));
         user.setForeground(MUTED);
 
-        right.add(user);
-
         top.add(left, BorderLayout.WEST);
-        top.add(right, BorderLayout.EAST);
+        top.add(user, BorderLayout.EAST);
 
         return top;
     }
@@ -112,15 +127,13 @@ public class OwnerFrame extends JFrame {
         side.setLayout(new BoxLayout(side, BoxLayout.Y_AXIS));
 
         side.add(Box.createVerticalStrut(16));
-
-        JLabel nav = sectionLabel("MAIN");
-        side.add(nav);
+        side.add(sectionLabel("MAIN"));
 
         NavItem dash = new NavItem("Dashboard", UIManager.getIcon("OptionPane.informationIcon"));
         NavItem users = new NavItem("User Management", UIManager.getIcon("FileView.directoryIcon"));
 
-        dash.addActionListener(e -> show(PAGE_DASHBOARD, dash, users, null, null));
-        users.addActionListener(e -> show(PAGE_USERS, users, dash, null, null));
+        dash.addActionListener(e -> selectPage(PAGE_DASHBOARD, dash, users, null, null));
+        users.addActionListener(e -> selectPage(PAGE_USERS, users, dash, null, null));
 
         side.add(dash);
         side.add(Box.createVerticalStrut(8));
@@ -132,8 +145,8 @@ public class OwnerFrame extends JFrame {
         NavItem cashier = new NavItem("Cashier View", UIManager.getIcon("FileView.fileIcon"));
         NavItem barista = new NavItem("Barista View", UIManager.getIcon("FileView.fileIcon"));
 
-        cashier.addActionListener(e -> show(PAGE_CASHIER, cashier, dash, users, barista));
-        barista.addActionListener(e -> show(PAGE_BARISTA, barista, dash, users, cashier));
+        cashier.addActionListener(e -> selectPage(PAGE_CASHIER, cashier, dash, users, barista));
+        barista.addActionListener(e -> selectPage(PAGE_BARISTA, barista, dash, users, cashier));
 
         side.add(cashier);
         side.add(Box.createVerticalStrut(8));
@@ -141,19 +154,27 @@ public class OwnerFrame extends JFrame {
 
         side.add(Box.createVerticalGlue());
 
-        // start selected
-        show(PAGE_DASHBOARD, dash, users, cashier, barista);
+        // Default selection
+        selectPage(PAGE_DASHBOARD, dash, users, cashier, barista);
 
         return side;
     }
 
-    private void show(String page, NavItem selected, NavItem a, NavItem b, NavItem c) {
+    private void selectPage(String page, NavItem selected, NavItem a, NavItem b, NavItem c) {
         if (a != null) a.setSelected(a == selected);
         if (b != null) b.setSelected(b == selected);
         if (c != null) c.setSelected(c == selected);
         selected.setSelected(true);
 
         cardLayout.show(content, page);
+
+        // IMPORTANT: Only refresh if dashboard components already exist
+        if (PAGE_DASHBOARD.equals(page)) {
+            if (lblTodaySales != null) refreshDashboardSafe();
+        }
+        if (PAGE_USERS.equals(page)) {
+            if (usersModel != null) refreshUsersTableSafe();
+        }
     }
 
     private JLabel sectionLabel(String text) {
@@ -187,68 +208,116 @@ public class OwnerFrame extends JFrame {
         return wrapper;
     }
 
-    // -------------------- Dashboard --------------------
+    // -------------------- DASHBOARD (DB connected) --------------------
 
     private JComponent buildDashboardPage() {
         JPanel page = new JPanel(new BorderLayout(14, 14));
         page.setOpaque(false);
 
-        page.add(pageHeader("Dashboard", "High-level overview (placeholders for now)."), BorderLayout.NORTH);
+        JPanel header = pageHeader("Dashboard", "Live overview from database.");
+        JButton btnReload = ghost("Reload");
+        btnReload.addActionListener(e -> refreshDashboardSafe());
 
+        JPanel headerRow = new JPanel(new BorderLayout());
+        headerRow.setOpaque(false);
+        headerRow.add(header, BorderLayout.WEST);
+        headerRow.add(btnReload, BorderLayout.EAST);
+
+        page.add(headerRow, BorderLayout.NORTH);
+
+        // metric cards
         JPanel cards = new JPanel(new GridLayout(1, 4, 12, 12));
         cards.setOpaque(false);
 
-        cards.add(metricCard("Today Sales", "₱ 0.00", "Placeholder"));
-        cards.add(metricCard("Orders In Queue", "0", "Placeholder"));
-        cards.add(metricCard("Completed Today", "0", "Placeholder"));
-        cards.add(metricCard("Active Staff", "0", "Placeholder"));
+        lblTodaySales = metricValueLabel("₱ 0.00");
+        lblOrdersQueue = metricValueLabel("0");
+        lblCompletedToday = metricValueLabel("0");
+        lblTotalUsers = metricValueLabel("0");
 
-        JPanel lower = new JPanel(new GridLayout(1, 2, 12, 12));
-        lower.setOpaque(false);
+        cards.add(metricCardWithValue("Today Sales (Paid)", lblTodaySales, "Sum of paid orders today"));
+        cards.add(metricCardWithValue("Orders In Queue", lblOrdersQueue, "PENDING / IN_PROGRESS"));
+        cards.add(metricCardWithValue("Completed Today", lblCompletedToday, "Status = COMPLETED today"));
+        cards.add(metricCardWithValue("Total Users", lblTotalUsers, "All accounts in users table"));
 
-        lower.add(surfacePlaceholder("Sales Trend", "Add chart later (daily/weekly sales)."));
-        lower.add(surfacePlaceholder("Top Items", "Add table later (best sellers)."));
+        // recent daily sales table
+        JPanel tableBox = surfacePanel(new EmptyBorder(14, 14, 14, 14));
+        tableBox.setLayout(new BorderLayout(10, 10));
+
+        JLabel t = new JLabel("Recent Daily Sales");
+        t.setFont(new Font("SansSerif", Font.BOLD, 14));
+        t.setForeground(TEXT);
+
+        dailySalesModel = new DefaultTableModel(new String[]{"Date", "Gross", "Paid", "Orders"}, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+
+        JTable table = new JTable(dailySalesModel);
+        table.setRowHeight(28);
+        table.getTableHeader().setReorderingAllowed(false);
+
+        JScrollPane sp = new JScrollPane(table);
+        sp.setBorder(BorderFactory.createLineBorder(BORDER, 1));
+
+        tableBox.add(t, BorderLayout.NORTH);
+        tableBox.add(sp, BorderLayout.CENTER);
 
         JPanel center = new JPanel(new BorderLayout(12, 12));
         center.setOpaque(false);
         center.add(cards, BorderLayout.NORTH);
-        center.add(lower, BorderLayout.CENTER);
+        center.add(tableBox, BorderLayout.CENTER);
 
         page.add(center, BorderLayout.CENTER);
         return page;
     }
 
-    private JComponent metricCard(String title, String value, String footnote) {
-        JPanel card = surfacePanel(new EmptyBorder(14, 14, 14, 14));
-        card.setLayout(new BorderLayout(6, 6));
-
-        JLabel t = new JLabel(title);
-        t.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        t.setForeground(MUTED);
-
-        JLabel v = new JLabel(value);
-        v.setFont(new Font("SansSerif", Font.BOLD, 22));
-        v.setForeground(TEXT);
-
-        JLabel f = new JLabel(footnote);
-        f.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        f.setForeground(new Color(173, 181, 189));
-
-        card.add(t, BorderLayout.NORTH);
-        card.add(v, BorderLayout.CENTER);
-        card.add(f, BorderLayout.SOUTH);
-
-        return card;
+    private void refreshDashboardSafe() {
+        try {
+            refreshDashboard();
+        } catch (Exception ex) {
+            showDbError(ex);
+        }
     }
 
-    // -------------------- Users CRUD (DB-backed) --------------------
+    private void refreshDashboard() throws Exception {
+        DashboardSummary s = dashboardDAO.loadSummary();
+
+        // Show paid total as “sales”
+        lblTodaySales.setText(moneyPH.format(s.todayPaid));
+        lblOrdersQueue.setText(String.valueOf(s.ordersInQueue));
+        lblCompletedToday.setText(String.valueOf(s.completedToday));
+        lblTotalUsers.setText(String.valueOf(s.totalUsers));
+
+        if (dailySalesModel != null) {
+            dailySalesModel.setRowCount(0);
+            List<DailySalesRow> rows = dashboardDAO.loadRecentDailySales(14);
+            for (DailySalesRow r : rows) {
+                dailySalesModel.addRow(new Object[]{
+                        r.saleDate,
+                        moneyPH.format(r.grossTotal),
+                        moneyPH.format(r.paidTotal),
+                        r.orderCount
+                });
+            }
+        }
+    }
+
+    // -------------------- USERS (DB connected) --------------------
 
     private JComponent buildUsersPage() {
         JPanel page = new JPanel(new BorderLayout(14, 14));
         page.setOpaque(false);
 
         JPanel header = pageHeader("User Management", "Create, update, and delete staff accounts.");
-        page.add(header, BorderLayout.NORTH);
+
+        JButton btnRefresh = ghost("Refresh");
+        btnRefresh.addActionListener(e -> refreshUsersTableSafe());
+
+        JPanel headerRow = new JPanel(new BorderLayout());
+        headerRow.setOpaque(false);
+        headerRow.add(header, BorderLayout.WEST);
+        headerRow.add(btnRefresh, BorderLayout.EAST);
+
+        page.add(headerRow, BorderLayout.NORTH);
 
         // Left: table surface
         JPanel left = surfacePanel(new EmptyBorder(14, 14, 14, 14));
@@ -284,7 +353,8 @@ public class OwnerFrame extends JFrame {
         fUser = new JTextField();
         fPass = new JPasswordField();
 
-        // If your DB uses OWNER/CASHIER/BARISTA, change these values to match exactly.
+        // IMPORTANT: These MUST match the exact values stored in your DB users.role
+        // If your DB uses OWNER/CASHIER/BARISTA, change these strings.
         fRole = new JComboBox<>(new String[]{"owner", "Cashier", "Barista"});
 
         styleField(fId);
@@ -293,22 +363,20 @@ public class OwnerFrame extends JFrame {
         styleField(fRole);
 
         JButton btnNew = ghost("New");
-        JButton btnRefresh = ghost("Refresh");
         JButton btnAdd = primary("Add User");
         JButton btnUpdate = primaryOutline("Update");
         JButton btnDelete = danger("Delete");
 
         btnNew.addActionListener(e -> clearUserForm());
-        btnRefresh.addActionListener(e -> refreshUsersTableSafe());
         btnAdd.addActionListener(e -> onAddUser());
         btnUpdate.addActionListener(e -> onUpdateUser());
         btnDelete.addActionListener(e -> onDeleteUser());
 
-        // Select row -> load form
         usersTable.getSelectionModel().addListSelectionListener(e -> {
             if (e.getValueIsAdjusting()) return;
             int row = usersTable.getSelectedRow();
             if (row < 0) return;
+
             int id = Integer.parseInt(usersModel.getValueAt(row, 0).toString());
             loadUserIntoFormSafe(id);
         });
@@ -346,27 +414,19 @@ public class OwnerFrame extends JFrame {
         g.gridy = 8; g.insets = new Insets(0, 0, 14, 0);
         right.add(fRole, g);
 
-        JPanel row1 = new JPanel(new GridLayout(1, 2, 10, 10));
-        row1.setOpaque(false);
-        row1.add(btnNew);
-        row1.add(btnRefresh);
+        JPanel actions = new JPanel(new GridLayout(1, 4, 10, 10));
+        actions.setOpaque(false);
+        actions.add(btnNew);
+        actions.add(btnAdd);
+        actions.add(btnUpdate);
+        actions.add(btnDelete);
 
-        JPanel row2 = new JPanel(new GridLayout(1, 3, 10, 10));
-        row2.setOpaque(false);
-        row2.add(btnAdd);
-        row2.add(btnUpdate);
-        row2.add(btnDelete);
+        g.gridy = 9; g.insets = new Insets(0, 0, 0, 0);
+        right.add(actions, g);
 
-        g.gridy = 9; g.insets = new Insets(0, 0, 10, 0);
-        right.add(row1, g);
-
-        g.gridy = 10; g.insets = new Insets(0, 0, 0, 0);
-        right.add(row2, g);
-
-        g.gridy = 11; g.weighty = 1;
+        g.gridy = 10; g.weighty = 1;
         right.add(Box.createVerticalGlue(), g);
 
-        // Layout main: left table + right form
         JPanel center = new JPanel(new BorderLayout(12, 12));
         center.setOpaque(false);
         center.add(left, BorderLayout.CENTER);
@@ -375,19 +435,6 @@ public class OwnerFrame extends JFrame {
         page.add(center, BorderLayout.CENTER);
         return page;
     }
-
-    // -------------------- Placeholders --------------------
-
-    private JComponent buildPlaceholderPage(String title, String body) {
-        JPanel page = new JPanel(new BorderLayout(14, 14));
-        page.setOpaque(false);
-
-        page.add(pageHeader(title, "Coming soon."), BorderLayout.NORTH);
-        page.add(surfacePlaceholder(title, body), BorderLayout.CENTER);
-        return page;
-    }
-
-    // -------------------- DB CRUD handlers --------------------
 
     private void refreshUsersTableSafe() {
         try {
@@ -414,7 +461,7 @@ public class OwnerFrame extends JFrame {
 
             fId.setText(String.valueOf(u.getId()));
             fUser.setText(u.getUsername());
-            fPass.setText(u.getPassword()); // current DB stores plain text
+            fPass.setText(u.getPassword()); // plain text (matches current AuthService style)
             fRole.setSelectedItem(u.getRole());
         } catch (Exception ex) {
             showDbError(ex);
@@ -448,7 +495,6 @@ public class OwnerFrame extends JFrame {
             int newId = userDAO.insert(new User(0, username, password, role));
             refreshUsersTable();
             selectRowById(newId);
-
             JOptionPane.showMessageDialog(this, "User added.");
         } catch (Exception ex) {
             showDbError(ex);
@@ -498,12 +544,8 @@ public class OwnerFrame extends JFrame {
             }
 
             int id = Integer.parseInt(fId.getText().trim());
-            int confirm = JOptionPane.showConfirmDialog(
-                    this,
-                    "Delete this user?",
-                    "Confirm Delete",
-                    JOptionPane.YES_NO_OPTION
-            );
+            int confirm = JOptionPane.showConfirmDialog(this, "Delete this user?", "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION);
             if (confirm != JOptionPane.YES_OPTION) return;
 
             boolean ok = userDAO.delete(id);
@@ -533,17 +575,17 @@ public class OwnerFrame extends JFrame {
         }
     }
 
-    private void showDbError(Exception ex) {
-        ex.printStackTrace();
-        JOptionPane.showMessageDialog(
-                this,
-                "Database error:\n" + ex.getMessage(),
-                "Error",
-                JOptionPane.ERROR_MESSAGE
-        );
+    // -------------------- Placeholders --------------------
+
+    private JComponent buildPlaceholderPage(String title, String body) {
+        JPanel page = new JPanel(new BorderLayout(14, 14));
+        page.setOpaque(false);
+        page.add(pageHeader(title, "Coming soon."), BorderLayout.NORTH);
+        page.add(surfacePlaceholder(title, body), BorderLayout.CENTER);
+        return page;
     }
 
-    // -------------------- UI components & styling --------------------
+    // -------------------- UI helpers --------------------
 
     private JPanel pageHeader(String title, String subtitle) {
         JPanel head = new JPanel();
@@ -561,7 +603,6 @@ public class OwnerFrame extends JFrame {
         head.add(t);
         head.add(Box.createVerticalStrut(3));
         head.add(s);
-
         return head;
     }
 
@@ -601,6 +642,31 @@ public class OwnerFrame extends JFrame {
         l.setFont(new Font("SansSerif", Font.PLAIN, 12));
         l.setForeground(new Color(73, 80, 87));
         return l;
+    }
+
+    private JLabel metricValueLabel(String value) {
+        JLabel v = new JLabel(value);
+        v.setFont(new Font("SansSerif", Font.BOLD, 22));
+        v.setForeground(TEXT);
+        return v;
+    }
+
+    private JComponent metricCardWithValue(String title, JLabel valueLabel, String footnote) {
+        JPanel card = surfacePanel(new EmptyBorder(14, 14, 14, 14));
+        card.setLayout(new BorderLayout(6, 6));
+
+        JLabel t = new JLabel(title);
+        t.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        t.setForeground(MUTED);
+
+        JLabel f = new JLabel(footnote);
+        f.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        f.setForeground(new Color(173, 181, 189));
+
+        card.add(t, BorderLayout.NORTH);
+        card.add(valueLabel, BorderLayout.CENTER);
+        card.add(f, BorderLayout.SOUTH);
+        return card;
     }
 
     private void styleField(JComponent c) {
@@ -662,6 +728,16 @@ public class OwnerFrame extends JFrame {
         return b;
     }
 
+    private void showDbError(Exception ex) {
+        ex.printStackTrace();
+        JOptionPane.showMessageDialog(
+                this,
+                "Database error:\n" + ex.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE
+        );
+    }
+
     // -------------------- Nav item component --------------------
 
     private static class NavItem extends JButton {
@@ -701,7 +777,7 @@ public class OwnerFrame extends JFrame {
         SwingUtilities.invokeLater(() -> {
             try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }
             catch (Exception ignored) {}
-            new OwnerFrame("test").setVisible(true);
+            new OwnerFrame("owner").setVisible(true);
         });
     }
 }
