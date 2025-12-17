@@ -1,5 +1,6 @@
 package app.ui;
 
+import app.db.AssetService;
 import app.db.DashboardDAO;
 import app.db.UserDAO;
 import app.model.DailySalesRow;
@@ -56,7 +57,11 @@ public class OwnerFrame extends JFrame {
     private static final Color PRIMARY = new Color(32, 85, 197);
     private static final Color DANGER = new Color(220, 53, 69);
 
+    private final AssetService assetService = new AssetService();
+    private final String ownerUsername;
+
     public OwnerFrame(String ownerUsername) {
+        this.ownerUsername = ownerUsername;
         setTitle("Owner Panel");
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
@@ -195,10 +200,7 @@ public class OwnerFrame extends JFrame {
         content.setBackground(BG);
         content.add(buildDashboardPage(), PAGE_DASHBOARD);
         content.add(buildUsersPage(), PAGE_USERS);
-        content.add(buildPlaceholderPage(
-                "Cashier View (Placeholder)",
-                "This will mirror the cashier’s UI (Menu, Cart, Payments, Receipts, Order Queue).\n\nFor now, this is a placeholder."
-        ), PAGE_CASHIER);
+        content.add(buildCashierPage(), PAGE_CASHIER);
         content.add(buildPlaceholderPage(
                 "Barista View (Placeholder)",
                 "This will mirror the barista’s UI (Queue Monitor, Order Status, Preparation workflow).\n\nFor now, this is a placeholder."
@@ -576,6 +578,20 @@ public class OwnerFrame extends JFrame {
     }
 
     // -------------------- Placeholders --------------------
+
+    private JComponent buildCashierPage() {
+        JPanel page = new JPanel(new BorderLayout(14, 14));
+        page.setOpaque(false);
+
+        page.add(pageHeader("Cashier View (Preview)", "Interact with the cashier UI using in-memory data."), BorderLayout.NORTH);
+
+        JPanel wrap = new JPanel(new BorderLayout());
+        wrap.setOpaque(false);
+        wrap.add(new CashierPanel(true, ownerUsername + " (Owner)", assetService.getShopNameOrDefault()), BorderLayout.CENTER);
+
+        page.add(wrap, BorderLayout.CENTER);
+        return page;
+    }
 
     private JComponent buildPlaceholderPage(String title, String body) {
         JPanel page = new JPanel(new BorderLayout(14, 14));

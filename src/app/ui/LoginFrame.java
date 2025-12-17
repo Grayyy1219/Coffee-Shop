@@ -245,23 +245,23 @@ public class LoginFrame extends JFrame {
             lblStatus.setText(result.message);
             return;
         }
-if ("OWNER".equalsIgnoreCase(result.role)) {
-    new OwnerFrame(user).setVisible(true);
-    dispose();
-    return;
-}
 
-// Later:
-// else if CASHIER -> open CashierFrame
-// else if BARISTA -> open BaristaFrame
+        if ("OWNER".equalsIgnoreCase(result.role)) {
+            new OwnerFrame(user).setVisible(true);
+            dispose();
+            return;
+        }
+
+        if ("CASHIER".equalsIgnoreCase(result.role)) {
+            new CashierFrame(user).setVisible(true);
+            dispose();
+            return;
+        }
 
         JOptionPane.showMessageDialog(this,
-                "Welcome, " + user + " (" + result.role + ")",
+                "Welcome, " + user + " (" + result.role + ")\nRole view not yet implemented.",
                 "Login Success",
                 JOptionPane.INFORMATION_MESSAGE);
-
-        // TODO: open role frame then dispose
-        // new OwnerFrame().setVisible(true); dispose();
         
     }
 
