@@ -258,6 +258,12 @@ public class LoginFrame extends JFrame {
             return;
         }
 
+        if ("BARISTA".equalsIgnoreCase(result.role)) {
+            new BaristaFrame(user).setVisible(true);
+            dispose();
+            return;
+        }
+
         JOptionPane.showMessageDialog(this,
                 "Welcome, " + user + " (" + result.role + ")\nRole view not yet implemented.",
                 "Login Success",

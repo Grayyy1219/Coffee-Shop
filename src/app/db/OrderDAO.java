@@ -59,11 +59,66 @@ public class OrderDAO {
     }
 
     public void updateStatusToCompleted(int orderId) throws Exception {
-        String sql = "UPDATE orders SET status = 'COMPLETED', paid = 1 WHERE id = ?";
+        updateStatus(orderId, "COMPLETED", true);
+    }
+
+    public void updateStatusToInProgress(int orderId) throws Exception {
+        updateStatus(orderId, "IN_PROGRESS", false);
+    }
+
+    private void updateStatus(int orderId, String status, boolean paid) throws Exception {
+        String sql = "UPDATE orders SET status = ?, paid = ? WHERE id = ?";
         try (Connection con = DB.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, orderId);
+
+            ps.setString(1, status);
+            ps.setBoolean(2, paid);
+            ps.setInt(3, orderId);
             ps.executeUpdate();
+        }
+    }
+
+    public void updateOrderWithItems(Order order) throws Exception {
+        if (order.getId() == null) throw new IllegalArgumentException("Order id is required for update");
+
+        String orderSql = "UPDATE orders SET customer_name = ?, status = ?, subtotal = ?, tax = ?, total = ?, paid = ? WHERE id = ?";
+        String deleteItems = "DELETE FROM order_items WHERE order_id = ?";
+        String itemSql = "INSERT INTO order_items (order_id, item_code, item_name, options, quantity, unit_price, line_total) VALUES (?,?,?,?,?,?,?)";
+
+        try (Connection con = DB.getConnection()) {
+            con.setAutoCommit(false);
+
+            try (PreparedStatement ps = con.prepareStatement(orderSql)) {
+                ps.setString(1, order.getCustomerName());
+                ps.setString(2, order.getStatus());
+                ps.setBigDecimal(3, order.getSubtotal());
+                ps.setBigDecimal(4, order.getTax());
+                ps.setBigDecimal(5, order.getTotal());
+                ps.setBoolean(6, order.isPaid());
+                ps.setInt(7, order.getId());
+                ps.executeUpdate();
+            }
+
+            try (PreparedStatement del = con.prepareStatement(deleteItems)) {
+                del.setInt(1, order.getId());
+                del.executeUpdate();
+            }
+
+            try (PreparedStatement psItem = con.prepareStatement(itemSql)) {
+                for (OrderItem item : order.getItems()) {
+                    psItem.setInt(1, order.getId());
+                    psItem.setString(2, item.getItemCode());
+                    psItem.setString(3, item.getItemName());
+                    psItem.setString(4, item.getOptionsLabel());
+                    psItem.setInt(5, item.getQuantity());
+                    psItem.setBigDecimal(6, item.getUnitPrice());
+                    psItem.setBigDecimal(7, item.getLineTotal());
+                    psItem.addBatch();
+                }
+                psItem.executeBatch();
+            }
+
+            con.commit();
         }
     }
 

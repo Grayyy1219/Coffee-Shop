@@ -44,6 +44,30 @@ public class OrderQueue {
         return size == 0;
     }
 
+    public boolean remove(Order target) {
+        if (target == null || head == null) return false;
+
+        Node<Order> current = head;
+        Node<Order> prev = null;
+        while (current != null) {
+            if (current.data == target) {
+                if (prev == null) {
+                    head = current.next;
+                } else {
+                    prev.next = current.next;
+                }
+                if (current == tail) {
+                    tail = prev;
+                }
+                size--;
+                return true;
+            }
+            prev = current;
+            current = current.next;
+        }
+        return false;
+    }
+
     public int size() {
         return size;
     }

@@ -204,10 +204,7 @@ public class OwnerFrame extends JFrame {
         content.add(buildDashboardPage(), PAGE_DASHBOARD);
         content.add(buildUsersPage(), PAGE_USERS);
         content.add(buildCashierPage(), PAGE_CASHIER);
-        content.add(buildPlaceholderPage(
-                "Barista View (Placeholder)",
-                "This will mirror the barista’s UI (Queue Monitor, Order Status, Preparation workflow).\n\nFor now, this is a placeholder."
-        ), PAGE_BARISTA);
+        content.add(buildBaristaPage(), PAGE_BARISTA);
 
         wrapper.add(content, BorderLayout.CENTER);
         return wrapper;
@@ -610,6 +607,20 @@ public class OwnerFrame extends JFrame {
         JPanel wrap = new JPanel(new BorderLayout());
         wrap.setOpaque(false);
         wrap.add(new CashierPanel(true, ownerUsername + " (Owner)", assetService.getShopNameOrDefault()), BorderLayout.CENTER);
+
+        page.add(wrap, BorderLayout.CENTER);
+        return page;
+    }
+
+    private JComponent buildBaristaPage() {
+        JPanel page = new JPanel(new BorderLayout(14, 14));
+        page.setOpaque(false);
+
+        page.add(pageHeader("Barista View (Preview)", "Monitor the active queue and serve orders."), BorderLayout.NORTH);
+
+        JPanel wrap = new JPanel(new BorderLayout());
+        wrap.setOpaque(false);
+        wrap.add(new BaristaPanel(true, ownerUsername + " (Owner)", assetService.getShopNameOrDefault()), BorderLayout.CENTER);
 
         page.add(wrap, BorderLayout.CENTER);
         return page;

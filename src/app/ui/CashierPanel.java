@@ -44,6 +44,7 @@ public class CashierPanel extends JPanel {
     private final DefaultListModel<String> queueModel = new DefaultListModel<>();
     private final OrderQueue orderQueue = new OrderQueue();
     private final List<Order> currentQueueView = new ArrayList<>();
+    private Order editingOrder;
     private JList<String> queueList;
     private JLabel lblSubtotal;
     private JLabel lblTax;
@@ -327,8 +328,8 @@ public class CashierPanel extends JPanel {
         JScrollPane queueScroll = new JScrollPane(queueList);
         queueScroll.setBorder(BorderFactory.createLineBorder(BORDER, 1));
 
-        JButton btnServe = ghost("Serve Next");
-        btnServe.addActionListener(e -> serveNext());
+        JButton btnServe = primary("Edit Selected");
+        btnServe.addActionListener(e -> editSelectedOrder());
 
         queuePanel.add(queueHeaderWrap, BorderLayout.NORTH);
         queuePanel.add(queueScroll, BorderLayout.CENTER);
@@ -467,15 +468,22 @@ public class CashierPanel extends JPanel {
         double taxVal = 0;
         double totalVal = subtotalVal;
 
-        Order order = new Order();
-        order.setCode(generateOrderCode());
+        boolean editing = editingOrder != null;
+
+        Order order = editing ? editingOrder : new Order();
+        if (order.getCode() == null) {
+            order.setCode(generateOrderCode());
+        }
         order.setCustomerName(customerField.getText().isBlank() ? "Walk-in" : customerField.getText().trim());
         order.setSubtotal(BigDecimal.valueOf(subtotalVal));
         order.setTax(BigDecimal.valueOf(taxVal));
         order.setTotal(BigDecimal.valueOf(totalVal));
-        order.setStatus("PENDING");
+        if (order.getStatus() == null || "IN_PROGRESS".equalsIgnoreCase(order.getStatus())) {
+            order.setStatus("PENDING");
+        }
         order.setPaid(false);
 
+        order.getItems().clear();
         for (CartLine line : cart) {
             OrderItem item = new OrderItem();
             item.setItemCode(line.item.getCode());
@@ -491,7 +499,11 @@ public class CashierPanel extends JPanel {
         boolean dbOk = true;
         if (!previewMode) {
             try {
-                orderDAO.insertOrderWithItems(order);
+                if (editing && order.getId() != null) {
+                    orderDAO.updateOrderWithItems(order);
+                } else {
+                    orderDAO.insertOrderWithItems(order);
+                }
             } catch (Exception ex) {
                 dbOk = false;
                 setStatus("DB issue while saving order: " + ex.getMessage() + " (queued locally)", WARN);
@@ -508,39 +520,52 @@ public class CashierPanel extends JPanel {
         renderReceipt(order);
         cart.clear();
         refreshCartTable();
-        setStatus((previewMode ? "Preview: " : "") + "Queued order " + order.getCode() + (dbOk ? "" : " (not saved to DB)"), dbOk ? SUCCESS : WARN);
+        editingOrder = null;
+        setStatus((previewMode ? "Preview: " : "") + (editing ? "Updated order " : "Queued order ") + order.getCode() + (dbOk ? "" : " (not saved to DB)"), dbOk ? SUCCESS : WARN);
     }
 
-    private void serveNext() {
-        if (orderQueue.isEmpty()) {
-            setStatus("No orders in queue", WARN);
+    private void editSelectedOrder() {
+        int idx = queueList.getSelectedIndex();
+        if (idx < 0 || idx >= currentQueueView.size()) {
+            setStatus("Select an order to edit", WARN);
             return;
         }
-        Order next = orderQueue.peek();
-        renderReceipt(next);
 
-        String summary = "Serve this order?\n" +
-                "Order: " + next.getCode() + "\n" +
-                "Customer: " + next.getCustomerName() + "\n" +
-                "Total: " + MONEY_PH.format(next.getTotal());
-        int choice = JOptionPane.showConfirmDialog(this, summary, "Confirm Serve", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION) {
-            setStatus("Serve cancelled", WARN);
+        Order target = currentQueueView.get(idx);
+        String status = target.getStatus() == null ? "PENDING" : target.getStatus();
+        if ("IN_PROGRESS".equalsIgnoreCase(status)) {
+            setStatus("IN_PROGRESS orders can no longer be edited", WARN);
             return;
         }
-        if (!previewMode && next.getId() != null) {
-            try {
-                orderDAO.updateStatusToCompleted(next.getId());
-                next.setStatus("COMPLETED");
-                next.setPaid(true);
-            } catch (Exception ex) {
-                setStatus("DB error while marking order complete: " + ex.getMessage(), WARN);
-            }
-        }
 
-        orderQueue.dequeue();
+        editingOrder = target;
+        orderQueue.remove(target);
         refreshQueueList();
-        setStatus("Served " + next.getCode(), SUCCESS);
+
+        loadOrderIntoCart(target);
+        renderReceipt(target);
+        setStatus("Editing order " + target.getCode() + " (update then Checkout & Queue)", PRIMARY);
+    }
+
+    private void loadOrderIntoCart(Order order) {
+        cart.clear();
+        customerField.setText(order.getCustomerName());
+
+        for (OrderItem item : order.getItems()) {
+            addCartLineFromOrderItem(item);
+        }
+        refreshCartTable();
+    }
+
+    private void addCartLineFromOrderItem(OrderItem item) {
+        String code = item.getItemCode() == null ? "" : item.getItemCode();
+        MenuItem menu = allMenuItems.stream()
+                .filter(m -> m.getCode().equalsIgnoreCase(code))
+                .findFirst()
+                .orElse(new MenuItem(code, item.getItemName(), "Custom", item.getUnitPrice()));
+
+        DrinkOptions options = new DrinkOptions("Standard", "N/A", false, false, false, item.getOptionsLabel());
+        cart.add(new CartLine(menu, options, item.getQuantity()));
     }
 
     private void searchActiveOrders() {
