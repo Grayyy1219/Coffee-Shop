@@ -43,6 +43,8 @@ public class CashierPanel extends JPanel {
 
     private final DefaultListModel<String> queueModel = new DefaultListModel<>();
     private final OrderQueue orderQueue = new OrderQueue();
+    private final List<Order> currentQueueView = new ArrayList<>();
+    private JList<String> queueList;
     private JLabel lblSubtotal;
     private JLabel lblTax;
     private JLabel lblTotal;
@@ -222,7 +224,7 @@ public class CashierPanel extends JPanel {
         t.fill = GridBagConstraints.HORIZONTAL;
 
         lblSubtotal = totalRow(totals, t, 0, "Subtotal");
-        lblTax = totalRow(totals, t, 1, "VAT (12%)");
+        lblTax = totalRow(totals, t, 1, "VAT (0%)");
         lblTotal = totalRow(totals, t, 2, "Grand Total");
 
         JButton btnCheckout = primary("Checkout & Queue");
@@ -311,8 +313,17 @@ public class CashierPanel extends JPanel {
         queueHeaderWrap.add(Box.createVerticalStrut(6));
         queueHeaderWrap.add(queueSearchButtons);
 
-        JList<String> queueList = new JList<>(queueModel);
+        queueList = new JList<>(queueModel);
         queueList.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        queueList.addListSelectionListener(e -> {
+            if (e.getValueIsAdjusting()) return;
+            int idx = queueList.getSelectedIndex();
+            if (idx >= 0 && idx < currentQueueView.size()) {
+                Order selected = currentQueueView.get(idx);
+                renderReceipt(selected);
+                setStatus("Previewing " + selected.getCode(), PRIMARY);
+            }
+        });
         JScrollPane queueScroll = new JScrollPane(queueList);
         queueScroll.setBorder(BorderFactory.createLineBorder(BORDER, 1));
 
@@ -453,8 +464,8 @@ public class CashierPanel extends JPanel {
         }
 
         double subtotalVal = cart.stream().mapToDouble(c -> priceWithOptions(c.item, c.options) * c.qty).sum();
-        double taxVal = subtotalVal * 0.12;
-        double totalVal = subtotalVal + taxVal;
+        double taxVal = 0;
+        double totalVal = subtotalVal;
 
         Order order = new Order();
         order.setCode(generateOrderCode());
@@ -506,6 +517,17 @@ public class CashierPanel extends JPanel {
             return;
         }
         Order next = orderQueue.peek();
+        renderReceipt(next);
+
+        String summary = "Serve this order?\n" +
+                "Order: " + next.getCode() + "\n" +
+                "Customer: " + next.getCustomerName() + "\n" +
+                "Total: " + MONEY_PH.format(next.getTotal());
+        int choice = JOptionPane.showConfirmDialog(this, summary, "Confirm Serve", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (choice != JOptionPane.OK_OPTION) {
+            setStatus("Serve cancelled", WARN);
+            return;
+        }
         if (!previewMode && next.getId() != null) {
             try {
                 orderDAO.updateStatusToCompleted(next.getId());
@@ -585,8 +607,8 @@ public class CashierPanel extends JPanel {
         }
 
         double subtotal = cart.stream().mapToDouble(l -> priceWithOptions(l.item, l.options) * l.qty).sum();
-        double tax = subtotal * 0.12;
-        double total = subtotal + tax;
+        double tax = 0;
+        double total = subtotal;
 
         lblSubtotal.setText(MONEY_PH.format(subtotal));
         lblTax.setText(MONEY_PH.format(tax));
@@ -599,6 +621,8 @@ public class CashierPanel extends JPanel {
 
     private void rebuildQueueList(List<Order> orders) {
         queueModel.clear();
+        currentQueueView.clear();
+        currentQueueView.addAll(orders);
         for (Order o : orders) {
             queueModel.addElement(formatQueueLine(o));
         }
@@ -629,7 +653,7 @@ public class CashierPanel extends JPanel {
         }
         sb.append("---------------------------\n");
         sb.append(String.format("Subtotal: %s\n", MONEY_PH.format(order.getSubtotal())));
-        sb.append(String.format("VAT (12%%): %s\n", MONEY_PH.format(order.getTax())));
+        sb.append(String.format("VAT (0%%): %s\n", MONEY_PH.format(order.getTax())));
         sb.append(String.format("TOTAL: %s\n", MONEY_PH.format(order.getTotal())));
         sb.append("Thank you!\n");
         receiptArea.setText(sb.toString());
