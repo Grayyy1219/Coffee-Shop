@@ -701,7 +701,7 @@ public class OwnerFrame extends JFrame {
         SwingUtilities.invokeLater(() -> {
             try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }
             catch (Exception ignored) {}
-            new OwnerFrame("owner").setVisible(true);
+            new OwnerFrame("test").setVisible(true);
         });
     }
 }
