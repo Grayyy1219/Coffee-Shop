@@ -12,7 +12,7 @@ import java.util.List;
 public class MenuItemDAO {
 
     public List<MenuItem> findAll() throws Exception {
-        String sql = "SELECT code, name, category, price FROM menu_items ORDER BY name ASC";
+        String sql = "SELECT code, name, category, price, image_url FROM menu_items ORDER BY name ASC";
         try (Connection con = DB.getConnection();
              PreparedStatement ps = con.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -23,7 +23,8 @@ public class MenuItemDAO {
                         rs.getString("code"),
                         rs.getString("name"),
                         rs.getString("category"),
-                        rs.getBigDecimal("price")
+                        rs.getBigDecimal("price"),
+                        rs.getString("image_url")
                 ));
             }
             return out;
@@ -31,7 +32,7 @@ public class MenuItemDAO {
     }
 
     public MenuItem findByCode(String code) throws Exception {
-        String sql = "SELECT code, name, category, price FROM menu_items WHERE code = ?";
+        String sql = "SELECT code, name, category, price, image_url FROM menu_items WHERE code = ?";
         try (Connection con = DB.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, code);
@@ -41,32 +42,35 @@ public class MenuItemDAO {
                         rs.getString("code"),
                         rs.getString("name"),
                         rs.getString("category"),
-                        rs.getBigDecimal("price")
+                        rs.getBigDecimal("price"),
+                        rs.getString("image_url")
                 );
             }
         }
     }
 
     public int insert(MenuItem item) throws Exception {
-        String sql = "INSERT INTO menu_items (code, name, category, price) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO menu_items (code, name, category, price, image_url) VALUES (?, ?, ?, ?, ?)";
         try (Connection con = DB.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, item.getCode());
             ps.setString(2, item.getName());
             ps.setString(3, item.getCategory());
             ps.setBigDecimal(4, item.getPrice());
+            ps.setString(5, item.getImageUrl());
             return ps.executeUpdate();
         }
     }
 
     public int update(MenuItem item) throws Exception {
-        String sql = "UPDATE menu_items SET name = ?, category = ?, price = ? WHERE code = ?";
+        String sql = "UPDATE menu_items SET name = ?, category = ?, price = ?, image_url = ? WHERE code = ?";
         try (Connection con = DB.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, item.getName());
             ps.setString(2, item.getCategory());
             ps.setBigDecimal(3, item.getPrice());
-            ps.setString(4, item.getCode());
+            ps.setString(4, item.getImageUrl());
+            ps.setString(5, item.getCode());
             return ps.executeUpdate();
         }
     }

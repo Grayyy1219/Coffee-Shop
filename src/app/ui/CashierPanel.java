@@ -17,11 +17,14 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.math.BigDecimal;
+import java.net.URL;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -77,6 +80,8 @@ public class CashierPanel extends JPanel {
     private final Color primarySoft = tint(primary, 0.88);
 
     private static final NumberFormat MONEY_PH = NumberFormat.getCurrencyInstance(new Locale("en", "PH"));
+    private static final int MENU_IMAGE_SIZE = 54;
+    private final Map<String, ImageIcon> menuImageCache = new HashMap<>();
 
     public CashierPanel(boolean previewMode, String username, String shopName) {
         this.previewMode = previewMode;
@@ -138,7 +143,7 @@ public class CashierPanel extends JPanel {
         // Left: menu + search
         JPanel menuPanel = surface(new EmptyBorder(14, 14, 14, 14));
         menuPanel.setLayout(new BorderLayout(10, 10));
-        menuPanel.setPreferredSize(new Dimension(320, 10));
+        menuPanel.setPreferredSize(new Dimension(380, 10));
 
         JLabel menuTitle = new JLabel("Menu");
         menuTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
@@ -171,7 +176,7 @@ public class CashierPanel extends JPanel {
         JList<MenuItem> menuList = new JList<>(menuModel);
         menuList.setCellRenderer(new MenuItemRenderer());
         menuList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        menuList.setFixedCellHeight(66);
+        menuList.setFixedCellHeight(86);
         menuList.addListSelectionListener(e -> {
             if (e.getValueIsAdjusting()) return;
             MenuItem item = menuList.getSelectedValue();
@@ -847,14 +852,22 @@ public class CashierPanel extends JPanel {
         } catch (Exception ex) {
             // fallback seed (local preview) if DB is unavailable
             allMenuItems.clear();
-            allMenuItems.add(new MenuItem("CF001", "Espresso", "Coffee", new BigDecimal("95")));
-            allMenuItems.add(new MenuItem("CF002", "Latte", "Coffee", new BigDecimal("125")));
-            allMenuItems.add(new MenuItem("CF003", "Cappuccino", "Coffee", new BigDecimal("115")));
-            allMenuItems.add(new MenuItem("CF004", "Cold Brew", "Coffee", new BigDecimal("150")));
-            allMenuItems.add(new MenuItem("TE001", "Matcha Latte", "Tea", new BigDecimal("145")));
-            allMenuItems.add(new MenuItem("TE002", "Chai Latte", "Tea", new BigDecimal("130")));
-            allMenuItems.add(new MenuItem("PA001", "Blueberry Muffin", "Pastry", new BigDecimal("85")));
-            allMenuItems.add(new MenuItem("FD001", "Breakfast Sandwich", "Food", new BigDecimal("185")));
+            allMenuItems.add(new MenuItem("CF001", "Espresso", "Coffee", new BigDecimal("95"),
+                    "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=200&q=60"));
+            allMenuItems.add(new MenuItem("CF002", "Latte", "Coffee", new BigDecimal("125"),
+                    "https://images.unsplash.com/photo-1481391032119-d89fee407e44?auto=format&fit=crop&w=200&q=60"));
+            allMenuItems.add(new MenuItem("CF003", "Cappuccino", "Coffee", new BigDecimal("115"),
+                    "https://images.unsplash.com/photo-1504753793650-d4a2b783c15e?auto=format&fit=crop&w=200&q=60"));
+            allMenuItems.add(new MenuItem("CF004", "Cold Brew", "Coffee", new BigDecimal("150"),
+                    "https://images.unsplash.com/photo-1507133750040-4a8f57021571?auto=format&fit=crop&w=200&q=60"));
+            allMenuItems.add(new MenuItem("TE001", "Matcha Latte", "Tea", new BigDecimal("145"),
+                    "https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&w=200&q=60"));
+            allMenuItems.add(new MenuItem("TE002", "Chai Latte", "Tea", new BigDecimal("130"),
+                    "https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&w=200&q=60"));
+            allMenuItems.add(new MenuItem("PA001", "Blueberry Muffin", "Pastry", new BigDecimal("85"),
+                    "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=200&q=60"));
+            allMenuItems.add(new MenuItem("FD001", "Breakfast Sandwich", "Food", new BigDecimal("185"),
+                    "https://images.unsplash.com/photo-1505253758473-96b7015fcd40?auto=format&fit=crop&w=200&q=60"));
             setStatus("Loaded fallback menu (DB unavailable)", WARN);
         }
     }
@@ -1004,14 +1017,17 @@ public class CashierPanel extends JPanel {
     }
 
     private class MenuItemRenderer extends JPanel implements ListCellRenderer<MenuItem> {
+        private final JLabel lblImage = new JLabel();
         private final JLabel lblName = new JLabel();
         private final JLabel lblPrice = new JLabel();
         private final JLabel lblCategory = new JLabel();
 
         MenuItemRenderer() {
-            setLayout(new BorderLayout());
-            setBorder(new EmptyBorder(8, 10, 8, 10));
+            setLayout(new BorderLayout(12, 0));
+            setBorder(new EmptyBorder(12, 12, 12, 12));
             setOpaque(true);
+
+            lblImage.setPreferredSize(new Dimension(MENU_IMAGE_SIZE, MENU_IMAGE_SIZE));
 
             lblName.setFont(new Font("SansSerif", Font.BOLD, 13));
             lblName.setForeground(TEXT);
@@ -1022,8 +1038,15 @@ public class CashierPanel extends JPanel {
             lblCategory.setFont(new Font("SansSerif", Font.PLAIN, 11));
             lblCategory.setForeground(MUTED);
 
-            add(lblName, BorderLayout.NORTH);
-            add(lblCategory, BorderLayout.CENTER);
+            JPanel text = new JPanel();
+            text.setOpaque(false);
+            text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
+            text.add(lblName);
+            text.add(Box.createVerticalStrut(4));
+            text.add(lblCategory);
+
+            add(lblImage, BorderLayout.WEST);
+            add(text, BorderLayout.CENTER);
             add(lblPrice, BorderLayout.EAST);
         }
 
@@ -1032,19 +1055,57 @@ public class CashierPanel extends JPanel {
             lblName.setText(value.getName());
             lblPrice.setText(MONEY_PH.format(value.getPrice()));
             lblCategory.setText(value.getCategory());
+            lblImage.setIcon(loadMenuImage(value.getImageUrl()));
 
             if (isSelected) {
                 setBackground(primarySoft);
                 setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(primary, 1),
-                        new EmptyBorder(8, 10, 8, 10)
+                        new EmptyBorder(12, 12, 12, 12)
                 ));
             } else {
                 setBackground(Color.WHITE);
-                setBorder(new EmptyBorder(8, 10, 8, 10));
+                setBorder(new EmptyBorder(12, 12, 12, 12));
             }
             return this;
         }
+    }
+
+    private ImageIcon loadMenuImage(String url) {
+        if (url == null || url.isBlank()) {
+            return scaledFallbackIcon();
+        }
+        String key = url.trim();
+        if (menuImageCache.containsKey(key)) {
+            return menuImageCache.get(key);
+        }
+        ImageIcon icon = null;
+        try {
+            if (key.startsWith("http")) {
+                icon = new ImageIcon(new URL(key));
+            } else {
+                icon = new ImageIcon(key);
+            }
+            if (icon.getIconWidth() > 0) {
+                Image scaled = icon.getImage().getScaledInstance(MENU_IMAGE_SIZE, MENU_IMAGE_SIZE, Image.SCALE_SMOOTH);
+                icon = new ImageIcon(scaled);
+            } else {
+                icon = scaledFallbackIcon();
+            }
+        } catch (Exception ex) {
+            icon = scaledFallbackIcon();
+        }
+        menuImageCache.put(key, icon);
+        return icon;
+    }
+
+    private ImageIcon scaledFallbackIcon() {
+        Icon fallback = UIManager.getIcon("FileView.directoryIcon");
+        if (fallback instanceof ImageIcon imageIcon) {
+            Image scaled = imageIcon.getImage().getScaledInstance(MENU_IMAGE_SIZE, MENU_IMAGE_SIZE, Image.SCALE_SMOOTH);
+            return new ImageIcon(scaled);
+        }
+        return null;
     }
 
     private static Color tint(Color color, double amount) {

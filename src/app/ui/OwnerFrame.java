@@ -54,6 +54,7 @@ public class OwnerFrame extends JFrame {
     private JTextField fItemName;
     private JTextField fItemCategory;
     private JTextField fItemPrice;
+    private JTextField fItemImageUrl;
     private JLabel menuHint;
     private JTextField menuSearchField;
     private JComboBox<String> menuCategoryFilter;
@@ -690,7 +691,7 @@ public class OwnerFrame extends JFrame {
         filterRow.add(labeled("Search", menuSearchField));
         filterRow.add(labeled("Category", menuCategoryFilter));
 
-        menuModel = new DefaultTableModel(new String[]{"Code", "Name", "Category", "Price"}, 0) {
+        menuModel = new DefaultTableModel(new String[]{"Code", "Name", "Category", "Price", "Image"}, 0) {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };
 
@@ -721,11 +722,13 @@ public class OwnerFrame extends JFrame {
         fItemName = new JTextField();
         fItemCategory = new JTextField();
         fItemPrice = new JTextField();
+        fItemImageUrl = new JTextField();
 
         styleField(fItemCode);
         styleField(fItemName);
         styleField(fItemCategory);
         styleField(fItemPrice);
+        styleField(fItemImageUrl);
 
         JButton btnNew = ghost("New");
         JButton btnAdd = primary("Add Item");
@@ -778,6 +781,11 @@ public class OwnerFrame extends JFrame {
         g.gridy = 8; g.insets = new Insets(0, 0, 14, 0);
         right.add(fItemPrice, g);
 
+        g.gridy = 9; g.insets = new Insets(0, 0, 6, 0);
+        right.add(fieldLabel("Image URL"), g);
+        g.gridy = 10; g.insets = new Insets(0, 0, 14, 0);
+        right.add(fItemImageUrl, g);
+
         JPanel actions = new JPanel(new GridLayout(1, 4, 10, 10));
         actions.setOpaque(false);
         actions.add(btnNew);
@@ -785,10 +793,10 @@ public class OwnerFrame extends JFrame {
         actions.add(btnUpdate);
         actions.add(btnDelete);
 
-        g.gridy = 9; g.insets = new Insets(0, 0, 0, 0);
+        g.gridy = 11; g.insets = new Insets(0, 0, 0, 0);
         right.add(actions, g);
 
-        g.gridy = 10; g.weighty = 1;
+        g.gridy = 12; g.weighty = 1;
         right.add(Box.createVerticalGlue(), g);
 
         JPanel center = new JPanel(new BorderLayout(12, 12));
@@ -825,6 +833,7 @@ public class OwnerFrame extends JFrame {
             fItemName.setText(item.getName());
             fItemCategory.setText(item.getCategory());
             fItemPrice.setText(item.getPrice().toPlainString());
+            fItemImageUrl.setText(item.getImageUrl() == null ? "" : item.getImageUrl());
         } catch (Exception ex) {
             showDbError(ex);
         }
@@ -836,6 +845,7 @@ public class OwnerFrame extends JFrame {
         fItemName.setText("");
         fItemCategory.setText("");
         fItemPrice.setText("");
+        fItemImageUrl.setText("");
         if (menuHint != null) menuHint.setText("Tip: Select an item to edit. Use New to clear the form.");
     }
 
@@ -874,7 +884,8 @@ public class OwnerFrame extends JFrame {
                     item.getCode(),
                     item.getName(),
                     item.getCategory(),
-                    moneyPH.format(item.getPrice())
+                    moneyPH.format(item.getPrice()),
+                    item.getImageUrl()
             });
         }
     }
@@ -945,6 +956,7 @@ public class OwnerFrame extends JFrame {
         String name = fItemName.getText().trim();
         String category = fItemCategory.getText().trim();
         String priceText = fItemPrice.getText().trim();
+        String imageUrl = fItemImageUrl.getText().trim();
 
         if (code.isEmpty() || name.isEmpty() || category.isEmpty() || priceText.isEmpty()) {
             JOptionPane.showMessageDialog(this, "All fields are required.");
@@ -961,7 +973,7 @@ public class OwnerFrame extends JFrame {
             JOptionPane.showMessageDialog(this, "Price must be greater than zero.");
             return null;
         }
-        return new MenuItem(code, name, category, price);
+        return new MenuItem(code, name, category, price, imageUrl.isEmpty() ? null : imageUrl);
     }
 
     private void selectRowByCode(String code) {
