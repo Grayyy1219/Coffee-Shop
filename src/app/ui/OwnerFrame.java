@@ -182,6 +182,8 @@ public class OwnerFrame extends JFrame {
         side.add(Box.createVerticalStrut(8));
         side.add(users);
         side.add(Box.createVerticalStrut(8));
+        side.add(menu);
+        side.add(Box.createVerticalStrut(8));
         side.add(settings);
 
         side.add(Box.createVerticalStrut(18));
@@ -200,7 +202,7 @@ public class OwnerFrame extends JFrame {
         side.add(Box.createVerticalGlue());
 
         // Default selection
-        selectPage(PAGE_DASHBOARD, dash, dash, users, settings, cashier, barista);
+        selectPage(PAGE_DASHBOARD, dash, dash, users, menu, settings, cashier, barista);
 
         return side;
     }
