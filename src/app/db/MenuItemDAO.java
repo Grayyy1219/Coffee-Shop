@@ -29,4 +29,54 @@ public class MenuItemDAO {
             return out;
         }
     }
+
+    public MenuItem findByCode(String code) throws Exception {
+        String sql = "SELECT code, name, category, price FROM menu_items WHERE code = ?";
+        try (Connection con = DB.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, code);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                return new MenuItem(
+                        rs.getString("code"),
+                        rs.getString("name"),
+                        rs.getString("category"),
+                        rs.getBigDecimal("price")
+                );
+            }
+        }
+    }
+
+    public int insert(MenuItem item) throws Exception {
+        String sql = "INSERT INTO menu_items (code, name, category, price) VALUES (?, ?, ?, ?)";
+        try (Connection con = DB.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, item.getCode());
+            ps.setString(2, item.getName());
+            ps.setString(3, item.getCategory());
+            ps.setBigDecimal(4, item.getPrice());
+            return ps.executeUpdate();
+        }
+    }
+
+    public int update(MenuItem item) throws Exception {
+        String sql = "UPDATE menu_items SET name = ?, category = ?, price = ? WHERE code = ?";
+        try (Connection con = DB.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, item.getName());
+            ps.setString(2, item.getCategory());
+            ps.setBigDecimal(3, item.getPrice());
+            ps.setString(4, item.getCode());
+            return ps.executeUpdate();
+        }
+    }
+
+    public int deleteByCode(String code) throws Exception {
+        String sql = "DELETE FROM menu_items WHERE code = ?";
+        try (Connection con = DB.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, code);
+            return ps.executeUpdate();
+        }
+    }
 }

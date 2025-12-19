@@ -365,6 +365,10 @@ public class BaristaPanel extends JPanel {
         }
     }
 
+    public void refreshData() {
+        loadActiveQueueFromDatabase();
+    }
+
     // -------------------- UI updates --------------------
 
     private void refreshQueueList() {

@@ -2,9 +2,11 @@ package app.ui;
 
 import app.db.AssetService;
 import app.db.DashboardDAO;
+import app.db.MenuItemDAO;
 import app.db.UserDAO;
 import app.model.DailySalesRow;
 import app.model.DashboardSummary;
+import app.model.MenuItem;
 import app.model.User;
 import app.util.SelectionSort;
 
@@ -12,6 +14,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.util.Comparator;
 import java.util.List;
@@ -22,6 +25,7 @@ public class OwnerFrame extends JFrame {
     // Pages
     private static final String PAGE_DASHBOARD = "dashboard";
     private static final String PAGE_USERS = "users";
+    private static final String PAGE_MENU = "menu";
     private static final String PAGE_CASHIER = "cashier";
     private static final String PAGE_BARISTA = "barista";
     private static final String PAGE_SETTINGS = "settings";
@@ -32,6 +36,7 @@ public class OwnerFrame extends JFrame {
     // DAOs
     private final UserDAO userDAO = new UserDAO();
     private final DashboardDAO dashboardDAO = new DashboardDAO();
+    private final MenuItemDAO menuItemDAO = new MenuItemDAO();
 
     // USERS: table + form
     private DefaultTableModel usersModel;
@@ -41,6 +46,18 @@ public class OwnerFrame extends JFrame {
     private JPasswordField fPass;
     private JComboBox<String> fRole;
     private JLabel usersHint;
+
+    // MENU ITEMS: table + form
+    private DefaultTableModel menuModel;
+    private JTable menuTable;
+    private JTextField fItemCode;
+    private JTextField fItemName;
+    private JTextField fItemCategory;
+    private JTextField fItemPrice;
+    private JLabel menuHint;
+    private JTextField menuSearchField;
+    private JComboBox<String> menuCategoryFilter;
+    private final java.util.List<MenuItem> menuItemsCache = new java.util.ArrayList<>();
 
     // DASHBOARD: metric labels + table
     private JLabel lblTodaySales;
@@ -59,6 +76,9 @@ public class OwnerFrame extends JFrame {
     private Color selectedAccent;
     private JLabel accentValue;
     private JPanel accentSwatch;
+
+    private CashierPanel cashierPanel;
+    private BaristaPanel baristaPanel;
 
     // Theme
     private static final Color BG = new Color(243, 245, 249);
@@ -85,6 +105,7 @@ public class OwnerFrame extends JFrame {
         SwingUtilities.invokeLater(() -> {
             refreshDashboardSafe();
             refreshUsersTableSafe();
+            refreshMenuTableSafe();
         });
     }
 
@@ -149,11 +170,13 @@ public class OwnerFrame extends JFrame {
 
         NavItem dash = new NavItem("Dashboard", UIManager.getIcon("OptionPane.informationIcon"), primary, primarySoft, primaryDark);
         NavItem users = new NavItem("User Management", UIManager.getIcon("FileView.directoryIcon"), primary, primarySoft, primaryDark);
+        NavItem menu = new NavItem("Products", UIManager.getIcon("FileView.fileIcon"), primary, primarySoft, primaryDark);
         NavItem settings = new NavItem("System Settings", UIManager.getIcon("FileView.computerIcon"), primary, primarySoft, primaryDark);
 
-        dash.addActionListener(e -> selectPage(PAGE_DASHBOARD, dash, dash, users, settings, null, null));
-        users.addActionListener(e -> selectPage(PAGE_USERS, users, dash, users, settings, null, null));
-        settings.addActionListener(e -> selectPage(PAGE_SETTINGS, settings, dash, users, settings, null, null));
+        dash.addActionListener(e -> selectPage(PAGE_DASHBOARD, dash, dash, users, menu, settings, null, null));
+        users.addActionListener(e -> selectPage(PAGE_USERS, users, dash, users, menu, settings, null, null));
+        menu.addActionListener(e -> selectPage(PAGE_MENU, menu, dash, users, menu, settings, null, null));
+        settings.addActionListener(e -> selectPage(PAGE_SETTINGS, settings, dash, users, menu, settings, null, null));
 
         side.add(dash);
         side.add(Box.createVerticalStrut(8));
@@ -167,8 +190,8 @@ public class OwnerFrame extends JFrame {
         NavItem cashier = new NavItem("Cashier View", UIManager.getIcon("FileView.fileIcon"), primary, primarySoft, primaryDark);
         NavItem barista = new NavItem("Barista View", UIManager.getIcon("FileView.fileIcon"), primary, primarySoft, primaryDark);
 
-        cashier.addActionListener(e -> selectPage(PAGE_CASHIER, cashier, dash, users, settings, cashier, barista));
-        barista.addActionListener(e -> selectPage(PAGE_BARISTA, barista, dash, users, settings, cashier, barista));
+        cashier.addActionListener(e -> selectPage(PAGE_CASHIER, cashier, dash, users, menu, settings, cashier, barista));
+        barista.addActionListener(e -> selectPage(PAGE_BARISTA, barista, dash, users, menu, settings, cashier, barista));
 
         side.add(cashier);
         side.add(Box.createVerticalStrut(8));
@@ -197,6 +220,15 @@ public class OwnerFrame extends JFrame {
         if (PAGE_USERS.equals(page)) {
             if (usersModel != null) refreshUsersTableSafe();
         }
+        if (PAGE_MENU.equals(page)) {
+            if (menuModel != null) refreshMenuTableSafe();
+        }
+        if (PAGE_CASHIER.equals(page)) {
+            if (cashierPanel != null) cashierPanel.refreshData();
+        }
+        if (PAGE_BARISTA.equals(page)) {
+            if (baristaPanel != null) baristaPanel.refreshData();
+        }
     }
 
     private JLabel sectionLabel(String text) {
@@ -217,6 +249,7 @@ public class OwnerFrame extends JFrame {
         content.setBackground(BG);
         content.add(buildDashboardPage(), PAGE_DASHBOARD);
         content.add(buildUsersPage(), PAGE_USERS);
+        content.add(buildMenuItemsPage(), PAGE_MENU);
         content.add(buildSystemPage(), PAGE_SETTINGS);
         content.add(buildCashierPage(), PAGE_CASHIER);
         content.add(buildBaristaPage(), PAGE_BARISTA);
@@ -611,6 +644,336 @@ public class OwnerFrame extends JFrame {
         }
     }
 
+    // -------------------- MENU ITEMS (DB connected) --------------------
+
+    private JComponent buildMenuItemsPage() {
+        JPanel page = new JPanel(new BorderLayout(14, 14));
+        page.setOpaque(false);
+
+        JPanel header = pageHeader("Products", "Manage menu items, categories, and pricing.");
+
+        JButton btnRefresh = ghost("Refresh");
+        btnRefresh.addActionListener(e -> refreshMenuTableSafe());
+
+        JPanel headerRow = new JPanel(new BorderLayout());
+        headerRow.setOpaque(false);
+        headerRow.add(header, BorderLayout.WEST);
+        headerRow.add(btnRefresh, BorderLayout.EAST);
+
+        page.add(headerRow, BorderLayout.NORTH);
+
+        JPanel left = surfacePanel(new EmptyBorder(14, 14, 14, 14));
+        left.setLayout(new BorderLayout(10, 10));
+
+        menuHint = new JLabel("Tip: Select an item to edit. Use New to clear the form.");
+        menuHint.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        menuHint.setForeground(MUTED);
+
+        menuSearchField = new JTextField();
+        menuSearchField.setToolTipText("Search by code or name");
+        styleField(menuSearchField);
+
+        menuCategoryFilter = new JComboBox<>(new String[]{"All"});
+        styleField(menuCategoryFilter);
+
+        menuSearchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { applyMenuFilter(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { applyMenuFilter(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { applyMenuFilter(); }
+        });
+        menuCategoryFilter.addActionListener(e -> applyMenuFilter());
+
+        JPanel filterRow = new JPanel(new GridLayout(1, 2, 8, 0));
+        filterRow.setOpaque(false);
+        filterRow.add(labeled("Search", menuSearchField));
+        filterRow.add(labeled("Category", menuCategoryFilter));
+
+        menuModel = new DefaultTableModel(new String[]{"Code", "Name", "Category", "Price"}, 0) {
+            @Override public boolean isCellEditable(int row, int col) { return false; }
+        };
+
+        menuTable = new JTable(menuModel);
+        menuTable.setRowHeight(30);
+        menuTable.setShowHorizontalLines(true);
+        menuTable.setGridColor(new Color(241, 243, 245));
+        menuTable.getTableHeader().setReorderingAllowed(false);
+
+        JScrollPane sp = new JScrollPane(menuTable);
+        sp.setBorder(BorderFactory.createLineBorder(BORDER, 1));
+
+        JPanel leftHeader = new JPanel();
+        leftHeader.setOpaque(false);
+        leftHeader.setLayout(new BoxLayout(leftHeader, BoxLayout.Y_AXIS));
+        leftHeader.add(menuHint);
+        leftHeader.add(Box.createVerticalStrut(8));
+        leftHeader.add(filterRow);
+
+        left.add(leftHeader, BorderLayout.NORTH);
+        left.add(sp, BorderLayout.CENTER);
+
+        JPanel right = surfacePanel(new EmptyBorder(14, 14, 14, 14));
+        right.setLayout(new GridBagLayout());
+        right.setPreferredSize(new Dimension(420, 10));
+
+        fItemCode = new JTextField();
+        fItemName = new JTextField();
+        fItemCategory = new JTextField();
+        fItemPrice = new JTextField();
+
+        styleField(fItemCode);
+        styleField(fItemName);
+        styleField(fItemCategory);
+        styleField(fItemPrice);
+
+        JButton btnNew = ghost("New");
+        JButton btnAdd = primary("Add Item");
+        JButton btnUpdate = primaryOutline("Update");
+        JButton btnDelete = danger("Delete");
+
+        btnNew.addActionListener(e -> clearMenuForm());
+        btnAdd.addActionListener(e -> onAddMenuItem());
+        btnUpdate.addActionListener(e -> onUpdateMenuItem());
+        btnDelete.addActionListener(e -> onDeleteMenuItem());
+
+        menuTable.getSelectionModel().addListSelectionListener(e -> {
+            if (e.getValueIsAdjusting()) return;
+            int row = menuTable.getSelectedRow();
+            if (row < 0) return;
+            String code = menuModel.getValueAt(row, 0).toString();
+            loadMenuItemIntoFormSafe(code);
+        });
+
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridx = 0;
+        g.weightx = 1;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.anchor = GridBagConstraints.NORTHWEST;
+
+        JLabel formTitle = new JLabel("Create / Edit Item");
+        formTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
+        formTitle.setForeground(TEXT);
+
+        g.gridy = 0; g.insets = new Insets(0, 0, 12, 0);
+        right.add(formTitle, g);
+
+        g.gridy = 1; g.insets = new Insets(0, 0, 6, 0);
+        right.add(fieldLabel("Code"), g);
+        g.gridy = 2; g.insets = new Insets(0, 0, 12, 0);
+        right.add(fItemCode, g);
+
+        g.gridy = 3; g.insets = new Insets(0, 0, 6, 0);
+        right.add(fieldLabel("Name"), g);
+        g.gridy = 4; g.insets = new Insets(0, 0, 12, 0);
+        right.add(fItemName, g);
+
+        g.gridy = 5; g.insets = new Insets(0, 0, 6, 0);
+        right.add(fieldLabel("Category"), g);
+        g.gridy = 6; g.insets = new Insets(0, 0, 12, 0);
+        right.add(fItemCategory, g);
+
+        g.gridy = 7; g.insets = new Insets(0, 0, 6, 0);
+        right.add(fieldLabel("Price"), g);
+        g.gridy = 8; g.insets = new Insets(0, 0, 14, 0);
+        right.add(fItemPrice, g);
+
+        JPanel actions = new JPanel(new GridLayout(1, 4, 10, 10));
+        actions.setOpaque(false);
+        actions.add(btnNew);
+        actions.add(btnAdd);
+        actions.add(btnUpdate);
+        actions.add(btnDelete);
+
+        g.gridy = 9; g.insets = new Insets(0, 0, 0, 0);
+        right.add(actions, g);
+
+        g.gridy = 10; g.weighty = 1;
+        right.add(Box.createVerticalGlue(), g);
+
+        JPanel center = new JPanel(new BorderLayout(12, 12));
+        center.setOpaque(false);
+        center.add(left, BorderLayout.CENTER);
+        center.add(right, BorderLayout.EAST);
+
+        page.add(center, BorderLayout.CENTER);
+        return page;
+    }
+
+    private void refreshMenuTableSafe() {
+        try {
+            refreshMenuTable();
+            if (menuHint != null) menuHint.setText("Loaded " + menuModel.getRowCount() + " items from database.");
+        } catch (Exception ex) {
+            showDbError(ex);
+        }
+    }
+
+    private void refreshMenuTable() throws Exception {
+        if (menuModel == null) return;
+        menuItemsCache.clear();
+        menuItemsCache.addAll(menuItemDAO.findAll());
+        updateMenuCategoryOptions();
+        applyMenuFilter();
+    }
+
+    private void loadMenuItemIntoFormSafe(String code) {
+        try {
+            MenuItem item = menuItemDAO.findByCode(code);
+            if (item == null) return;
+            fItemCode.setText(item.getCode());
+            fItemName.setText(item.getName());
+            fItemCategory.setText(item.getCategory());
+            fItemPrice.setText(item.getPrice().toPlainString());
+        } catch (Exception ex) {
+            showDbError(ex);
+        }
+    }
+
+    private void clearMenuForm() {
+        if (menuTable != null) menuTable.clearSelection();
+        fItemCode.setText("");
+        fItemName.setText("");
+        fItemCategory.setText("");
+        fItemPrice.setText("");
+        if (menuHint != null) menuHint.setText("Tip: Select an item to edit. Use New to clear the form.");
+    }
+
+    private void updateMenuCategoryOptions() {
+        if (menuCategoryFilter == null) return;
+        String selected = menuCategoryFilter.getSelectedItem() == null ? "All"
+                : menuCategoryFilter.getSelectedItem().toString();
+        java.util.Set<String> categories = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        for (MenuItem item : menuItemsCache) {
+            categories.add(item.getCategory());
+        }
+        menuCategoryFilter.removeAllItems();
+        menuCategoryFilter.addItem("All");
+        for (String category : categories) {
+            menuCategoryFilter.addItem(category);
+        }
+        menuCategoryFilter.setSelectedItem(categories.contains(selected) ? selected : "All");
+    }
+
+    private void applyMenuFilter() {
+        if (menuModel == null) return;
+        String query = menuSearchField == null ? "" : menuSearchField.getText().trim().toLowerCase(Locale.ROOT);
+        String category = menuCategoryFilter == null || menuCategoryFilter.getSelectedItem() == null
+                ? "All"
+                : menuCategoryFilter.getSelectedItem().toString();
+
+        menuModel.setRowCount(0);
+        for (MenuItem item : menuItemsCache) {
+            boolean matchesQuery = query.isEmpty()
+                    || item.getCode().toLowerCase(Locale.ROOT).contains(query)
+                    || item.getName().toLowerCase(Locale.ROOT).contains(query);
+            boolean matchesCategory = "All".equalsIgnoreCase(category)
+                    || item.getCategory().equalsIgnoreCase(category);
+            if (!matchesQuery || !matchesCategory) continue;
+            menuModel.addRow(new Object[]{
+                    item.getCode(),
+                    item.getName(),
+                    item.getCategory(),
+                    moneyPH.format(item.getPrice())
+            });
+        }
+    }
+
+    private void onAddMenuItem() {
+        try {
+            MenuItem item = buildMenuItemFromForm();
+            if (item == null) return;
+            int inserted = menuItemDAO.insert(item);
+            if (inserted == 0) {
+                JOptionPane.showMessageDialog(this, "Add failed.");
+                return;
+            }
+            refreshMenuTable();
+            selectRowByCode(item.getCode());
+            JOptionPane.showMessageDialog(this, "Item added.");
+        } catch (Exception ex) {
+            showDbError(ex);
+        }
+    }
+
+    private void onUpdateMenuItem() {
+        try {
+            if (fItemCode.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Select an item to update.");
+                return;
+            }
+            MenuItem item = buildMenuItemFromForm();
+            if (item == null) return;
+            int updated = menuItemDAO.update(item);
+            if (updated == 0) {
+                JOptionPane.showMessageDialog(this, "Update failed (item not found).");
+                return;
+            }
+            refreshMenuTable();
+            selectRowByCode(item.getCode());
+            JOptionPane.showMessageDialog(this, "Item updated.");
+        } catch (Exception ex) {
+            showDbError(ex);
+        }
+    }
+
+    private void onDeleteMenuItem() {
+        try {
+            String code = fItemCode.getText().trim();
+            if (code.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Select an item to delete.");
+                return;
+            }
+            int confirm = JOptionPane.showConfirmDialog(this, "Delete this menu item?", "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION);
+            if (confirm != JOptionPane.YES_OPTION) return;
+            int deleted = menuItemDAO.deleteByCode(code);
+            if (deleted == 0) {
+                JOptionPane.showMessageDialog(this, "Delete failed (item not found).");
+                return;
+            }
+            refreshMenuTable();
+            clearMenuForm();
+            JOptionPane.showMessageDialog(this, "Item deleted.");
+        } catch (Exception ex) {
+            showDbError(ex);
+        }
+    }
+
+    private MenuItem buildMenuItemFromForm() {
+        String code = fItemCode.getText().trim();
+        String name = fItemName.getText().trim();
+        String category = fItemCategory.getText().trim();
+        String priceText = fItemPrice.getText().trim();
+
+        if (code.isEmpty() || name.isEmpty() || category.isEmpty() || priceText.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "All fields are required.");
+            return null;
+        }
+        BigDecimal price;
+        try {
+            price = new BigDecimal(priceText);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Price must be a valid number.");
+            return null;
+        }
+        if (price.compareTo(BigDecimal.ZERO) <= 0) {
+            JOptionPane.showMessageDialog(this, "Price must be greater than zero.");
+            return null;
+        }
+        return new MenuItem(code, name, category, price);
+    }
+
+    private void selectRowByCode(String code) {
+        if (menuModel == null || menuTable == null) return;
+        for (int r = 0; r < menuModel.getRowCount(); r++) {
+            String rowCode = menuModel.getValueAt(r, 0).toString();
+            if (rowCode.equalsIgnoreCase(code)) {
+                menuTable.setRowSelectionInterval(r, r);
+                menuTable.scrollRectToVisible(menuTable.getCellRect(r, 0, true));
+                return;
+            }
+        }
+    }
+
     // -------------------- SYSTEM SETTINGS --------------------
 
     private JComponent buildSystemPage() {
@@ -785,11 +1148,12 @@ public class OwnerFrame extends JFrame {
         JPanel page = new JPanel(new BorderLayout(14, 14));
         page.setOpaque(false);
 
-        page.add(pageHeader("Cashier View (Preview)", "Interact with the cashier UI using in-memory data."), BorderLayout.NORTH);
+        page.add(pageHeader("Cashier View", "Use the cashier workspace with live data."), BorderLayout.NORTH);
 
         JPanel wrap = new JPanel(new BorderLayout());
         wrap.setOpaque(false);
-        wrap.add(new CashierPanel(true, ownerUsername + " (Owner)", assetService.getShopNameOrDefault()), BorderLayout.CENTER);
+        cashierPanel = new CashierPanel(false, ownerUsername + " (Owner)", assetService.getShopNameOrDefault());
+        wrap.add(cashierPanel, BorderLayout.CENTER);
 
         page.add(wrap, BorderLayout.CENTER);
         return page;
@@ -799,11 +1163,12 @@ public class OwnerFrame extends JFrame {
         JPanel page = new JPanel(new BorderLayout(14, 14));
         page.setOpaque(false);
 
-        page.add(pageHeader("Barista View (Preview)", "Monitor the active queue and serve orders."), BorderLayout.NORTH);
+        page.add(pageHeader("Barista View", "Monitor the active queue and serve orders."), BorderLayout.NORTH);
 
         JPanel wrap = new JPanel(new BorderLayout());
         wrap.setOpaque(false);
-        wrap.add(new BaristaPanel(true, ownerUsername + " (Owner)", assetService.getShopNameOrDefault()), BorderLayout.CENTER);
+        baristaPanel = new BaristaPanel(false, ownerUsername + " (Owner)", assetService.getShopNameOrDefault());
+        wrap.add(baristaPanel, BorderLayout.CENTER);
 
         page.add(wrap, BorderLayout.CENTER);
         return page;
@@ -881,6 +1246,21 @@ public class OwnerFrame extends JFrame {
         v.setFont(new Font("SansSerif", Font.BOLD, 22));
         v.setForeground(TEXT);
         return v;
+    }
+
+    private JPanel labeled(String label, JComponent field) {
+        JPanel p = new JPanel();
+        p.setOpaque(false);
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+
+        JLabel l = new JLabel(label);
+        l.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        l.setForeground(new Color(73, 80, 87));
+
+        p.add(l);
+        p.add(Box.createVerticalStrut(4));
+        p.add(field);
+        return p;
     }
 
     private JComponent metricCardWithValue(String title, JLabel valueLabel, String footnote) {

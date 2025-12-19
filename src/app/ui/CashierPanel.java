@@ -57,6 +57,7 @@ public class CashierPanel extends JPanel {
     private JTextField orderSearchField;
     private JTextField orderCodeSearchField;
     private JComboBox<String> menuSortMode;
+    private JTextField menuSearchField;
 
     private int orderCounter = 1000;
 
@@ -143,19 +144,19 @@ public class CashierPanel extends JPanel {
         menuTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
         menuTitle.setForeground(TEXT);
 
-        JTextField search = new JTextField();
-        search.setToolTipText("Search menu items");
-        styleField(search);
+        menuSearchField = new JTextField();
+        menuSearchField.setToolTipText("Search menu items");
+        styleField(menuSearchField);
 
         menuSortMode = new JComboBox<>(new String[]{"Name (A-Z)", "Price (Low-High)"});
         menuSortMode.setToolTipText("Selection sort: name or price");
         styleField(menuSortMode);
-        menuSortMode.addActionListener(e -> filterMenu(search.getText()));
+        menuSortMode.addActionListener(e -> filterMenu(menuSearchField.getText()));
 
-        search.getDocument().addDocumentListener(new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent e) { filterMenu(search.getText()); }
-            @Override public void removeUpdate(DocumentEvent e) { filterMenu(search.getText()); }
-            @Override public void changedUpdate(DocumentEvent e) { filterMenu(search.getText()); }
+        menuSearchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { filterMenu(menuSearchField.getText()); }
+            @Override public void removeUpdate(DocumentEvent e) { filterMenu(menuSearchField.getText()); }
+            @Override public void changedUpdate(DocumentEvent e) { filterMenu(menuSearchField.getText()); }
         });
 
         JPanel menuHeader = new JPanel();
@@ -163,7 +164,7 @@ public class CashierPanel extends JPanel {
         menuHeader.setOpaque(false);
         menuHeader.add(menuTitle);
         menuHeader.add(Box.createVerticalStrut(8));
-        menuHeader.add(search);
+        menuHeader.add(menuSearchField);
         menuHeader.add(Box.createVerticalStrut(6));
         menuHeader.add(menuSortMode);
 
@@ -878,6 +879,13 @@ public class CashierPanel extends JPanel {
             refreshQueueList();
             setStatus("Queue fallback (DB unavailable): " + ex.getMessage(), WARN);
         }
+    }
+
+    public void refreshData() {
+        loadMenuFromDatabaseOrFallback();
+        String query = menuSearchField == null ? "" : menuSearchField.getText();
+        filterMenu(query);
+        loadActiveQueueFromDatabase();
     }
 
     // -------------------- Helpers --------------------
