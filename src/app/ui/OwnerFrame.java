@@ -166,7 +166,17 @@ public class OwnerFrame extends JFrame {
         user.setForeground(MUTED);
 
         top.add(left, BorderLayout.WEST);
-        top.add(user, BorderLayout.EAST);
+        JButton btnLogout = ghost("Logout");
+        btnLogout.addActionListener(e -> doLogout());
+
+        JPanel right = new JPanel();
+        right.setOpaque(false);
+        right.setLayout(new BoxLayout(right, BoxLayout.X_AXIS));
+        right.add(user);
+        right.add(Box.createHorizontalStrut(12));
+        right.add(btnLogout);
+
+        top.add(right, BorderLayout.EAST);
 
         return top;
     }
@@ -413,7 +423,7 @@ public class OwnerFrame extends JFrame {
         usersHint.setFont(new Font("SansSerif", Font.PLAIN, 12));
         usersHint.setForeground(MUTED);
 
-        usersModel = new DefaultTableModel(new String[]{"ID", "Username", "Role"}, 0) {
+        usersModel = new DefaultTableModel(new String[]{"ID", "Username", "Role", "Locked"}, 0) {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };
 
@@ -422,6 +432,7 @@ public class OwnerFrame extends JFrame {
         usersTable.setShowHorizontalLines(true);
         usersTable.setGridColor(new Color(241, 243, 245));
         usersTable.getTableHeader().setReorderingAllowed(false);
+        usersTable.setDefaultRenderer(Object.class, new LockedUserRenderer());
 
         JScrollPane sp = new JScrollPane(usersTable);
         sp.setBorder(BorderFactory.createLineBorder(BORDER, 1));
@@ -452,11 +463,13 @@ public class OwnerFrame extends JFrame {
         JButton btnAdd = primary("Add User");
         JButton btnUpdate = primaryOutline("Update");
         JButton btnDelete = danger("Delete");
+        JButton btnUnlock = ghost("Unlock");
 
         btnNew.addActionListener(e -> clearUserForm());
         btnAdd.addActionListener(e -> onAddUser());
         btnUpdate.addActionListener(e -> onUpdateUser());
         btnDelete.addActionListener(e -> onDeleteUser());
+        btnUnlock.addActionListener(e -> onUnlockUser());
 
         usersTable.getSelectionModel().addListSelectionListener(e -> {
             if (e.getValueIsAdjusting()) return;
@@ -500,12 +513,13 @@ public class OwnerFrame extends JFrame {
         g.gridy = 8; g.insets = new Insets(0, 0, 14, 0);
         right.add(fRole, g);
 
-        JPanel actions = new JPanel(new GridLayout(1, 4, 10, 10));
+        JPanel actions = new JPanel(new GridLayout(1, 5, 10, 10));
         actions.setOpaque(false);
         actions.add(btnNew);
         actions.add(btnAdd);
         actions.add(btnUpdate);
         actions.add(btnDelete);
+        actions.add(btnUnlock);
 
         g.gridy = 9; g.insets = new Insets(0, 0, 0, 0);
         right.add(actions, g);
@@ -536,7 +550,7 @@ public class OwnerFrame extends JFrame {
 
         usersModel.setRowCount(0);
         for (User u : userDAO.findAll()) {
-            usersModel.addRow(new Object[]{u.getId(), u.getUsername(), u.getRole()});
+            usersModel.addRow(new Object[]{u.getId(), u.getUsername(), u.getRole(), u.isLocked() ? "Yes" : "No"});
         }
     }
 
@@ -648,6 +662,33 @@ public class OwnerFrame extends JFrame {
         }
     }
 
+    private void onUnlockUser() {
+        try {
+            if (fId.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Select a user to unlock.");
+                return;
+            }
+
+            int id = Integer.parseInt(fId.getText().trim());
+            User u = userDAO.findById(id);
+            if (u == null) {
+                JOptionPane.showMessageDialog(this, "User not found.");
+                return;
+            }
+            if (!u.isLocked()) {
+                JOptionPane.showMessageDialog(this, "User is not locked.");
+                return;
+            }
+
+            userDAO.updateSecurity(id, false, 0);
+            refreshUsersTable();
+            selectRowById(id);
+            JOptionPane.showMessageDialog(this, "User unlocked.");
+        } catch (Exception ex) {
+            showDbError(ex);
+        }
+    }
+
     private void selectRowById(int id) {
         if (usersModel == null || usersTable == null) return;
 
@@ -659,6 +700,14 @@ public class OwnerFrame extends JFrame {
                 return;
             }
         }
+    }
+
+    private void doLogout() {
+        int confirm = JOptionPane.showConfirmDialog(this, "Log out now?", "Confirm Logout",
+                JOptionPane.YES_NO_OPTION);
+        if (confirm != JOptionPane.YES_OPTION) return;
+        new LoginFrame().setVisible(true);
+        dispose();
     }
 
     // -------------------- MENU ITEMS (DB connected) --------------------
@@ -1516,6 +1565,35 @@ public class OwnerFrame extends JFrame {
 
     private static int clamp(int value) {
         return Math.min(255, Math.max(0, value));
+    }
+
+    private class LockedUserRenderer extends javax.swing.table.DefaultTableCellRenderer {
+        private final Color lockedBg = new Color(254, 226, 226);
+        private final Color lockedFg = new Color(153, 27, 27);
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            boolean locked = false;
+            int lockedColumn = 3;
+            if (table.getColumnCount() > lockedColumn) {
+                Object lockedValue = table.getValueAt(row, lockedColumn);
+                if (lockedValue != null) {
+                    locked = "Yes".equalsIgnoreCase(lockedValue.toString())
+                            || "true".equalsIgnoreCase(lockedValue.toString());
+                }
+            }
+
+            if (locked && !isSelected) {
+                c.setBackground(lockedBg);
+                c.setForeground(lockedFg);
+            } else if (!isSelected) {
+                c.setBackground(Color.WHITE);
+                c.setForeground(TEXT);
+            }
+            return c;
+        }
     }
 
     // -------------------- Nav item component --------------------
