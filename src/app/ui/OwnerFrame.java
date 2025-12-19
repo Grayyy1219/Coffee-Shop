@@ -24,6 +24,7 @@ public class OwnerFrame extends JFrame {
     private static final String PAGE_USERS = "users";
     private static final String PAGE_CASHIER = "cashier";
     private static final String PAGE_BARISTA = "barista";
+    private static final String PAGE_SETTINGS = "settings";
 
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel content = new JPanel(cardLayout);
@@ -51,16 +52,25 @@ public class OwnerFrame extends JFrame {
 
     private final NumberFormat moneyPH = NumberFormat.getCurrencyInstance(new Locale("en", "PH"));
 
-    // Theme
-    private static final Color BG = new Color(245, 247, 250);
-    private static final Color SURFACE = Color.WHITE;
-    private static final Color BORDER = new Color(233, 236, 239);
-    private static final Color TEXT = new Color(33, 37, 41);
-    private static final Color MUTED = new Color(108, 117, 125);
-    private static final Color PRIMARY = new Color(32, 85, 197);
-    private static final Color DANGER = new Color(220, 53, 69);
+    // System settings inputs
+    private JTextField fSystemName;
+    private JLabel logoPreview;
+    private byte[] selectedLogoBytes;
+    private Color selectedAccent;
+    private JLabel accentValue;
+    private JPanel accentSwatch;
 
+    // Theme
+    private static final Color BG = new Color(243, 245, 249);
+    private static final Color SURFACE = Color.WHITE;
+    private static final Color BORDER = new Color(226, 232, 240);
+    private static final Color TEXT = new Color(30, 41, 59);
+    private static final Color MUTED = new Color(100, 116, 139);
+    private static final Color DANGER = new Color(220, 38, 38);
     private final AssetService assetService = new AssetService();
+    private final Color primary = assetService.getAccentColorOrDefault();
+    private final Color primaryDark = shade(primary, 0.2);
+    private final Color primarySoft = tint(primary, 0.86);
     private final String ownerUsername;
 
     public OwnerFrame(String ownerUsername) {
@@ -137,24 +147,28 @@ public class OwnerFrame extends JFrame {
         side.add(Box.createVerticalStrut(16));
         side.add(sectionLabel("MAIN"));
 
-        NavItem dash = new NavItem("Dashboard", UIManager.getIcon("OptionPane.informationIcon"));
-        NavItem users = new NavItem("User Management", UIManager.getIcon("FileView.directoryIcon"));
+        NavItem dash = new NavItem("Dashboard", UIManager.getIcon("OptionPane.informationIcon"), primary, primarySoft, primaryDark);
+        NavItem users = new NavItem("User Management", UIManager.getIcon("FileView.directoryIcon"), primary, primarySoft, primaryDark);
+        NavItem settings = new NavItem("System Settings", UIManager.getIcon("FileView.computerIcon"), primary, primarySoft, primaryDark);
 
-        dash.addActionListener(e -> selectPage(PAGE_DASHBOARD, dash, users, null, null));
-        users.addActionListener(e -> selectPage(PAGE_USERS, users, dash, null, null));
+        dash.addActionListener(e -> selectPage(PAGE_DASHBOARD, dash, dash, users, settings, null, null));
+        users.addActionListener(e -> selectPage(PAGE_USERS, users, dash, users, settings, null, null));
+        settings.addActionListener(e -> selectPage(PAGE_SETTINGS, settings, dash, users, settings, null, null));
 
         side.add(dash);
         side.add(Box.createVerticalStrut(8));
         side.add(users);
+        side.add(Box.createVerticalStrut(8));
+        side.add(settings);
 
         side.add(Box.createVerticalStrut(18));
         side.add(sectionLabel("ROLE PREVIEWS"));
 
-        NavItem cashier = new NavItem("Cashier View", UIManager.getIcon("FileView.fileIcon"));
-        NavItem barista = new NavItem("Barista View", UIManager.getIcon("FileView.fileIcon"));
+        NavItem cashier = new NavItem("Cashier View", UIManager.getIcon("FileView.fileIcon"), primary, primarySoft, primaryDark);
+        NavItem barista = new NavItem("Barista View", UIManager.getIcon("FileView.fileIcon"), primary, primarySoft, primaryDark);
 
-        cashier.addActionListener(e -> selectPage(PAGE_CASHIER, cashier, dash, users, barista));
-        barista.addActionListener(e -> selectPage(PAGE_BARISTA, barista, dash, users, cashier));
+        cashier.addActionListener(e -> selectPage(PAGE_CASHIER, cashier, dash, users, settings, cashier, barista));
+        barista.addActionListener(e -> selectPage(PAGE_BARISTA, barista, dash, users, settings, cashier, barista));
 
         side.add(cashier);
         side.add(Box.createVerticalStrut(8));
@@ -163,15 +177,15 @@ public class OwnerFrame extends JFrame {
         side.add(Box.createVerticalGlue());
 
         // Default selection
-        selectPage(PAGE_DASHBOARD, dash, users, cashier, barista);
+        selectPage(PAGE_DASHBOARD, dash, dash, users, settings, cashier, barista);
 
         return side;
     }
 
-    private void selectPage(String page, NavItem selected, NavItem a, NavItem b, NavItem c) {
-        if (a != null) a.setSelected(a == selected);
-        if (b != null) b.setSelected(b == selected);
-        if (c != null) c.setSelected(c == selected);
+    private void selectPage(String page, NavItem selected, NavItem... items) {
+        for (NavItem item : items) {
+            if (item != null) item.setSelected(item == selected);
+        }
         selected.setSelected(true);
 
         cardLayout.show(content, page);
@@ -203,6 +217,7 @@ public class OwnerFrame extends JFrame {
         content.setBackground(BG);
         content.add(buildDashboardPage(), PAGE_DASHBOARD);
         content.add(buildUsersPage(), PAGE_USERS);
+        content.add(buildSystemPage(), PAGE_SETTINGS);
         content.add(buildCashierPage(), PAGE_CASHIER);
         content.add(buildBaristaPage(), PAGE_BARISTA);
 
@@ -596,6 +611,174 @@ public class OwnerFrame extends JFrame {
         }
     }
 
+    // -------------------- SYSTEM SETTINGS --------------------
+
+    private JComponent buildSystemPage() {
+        JPanel page = new JPanel(new BorderLayout(14, 14));
+        page.setOpaque(false);
+
+        JPanel header = pageHeader("System Settings", "Update the logo, shop name, and accent color.");
+
+        JButton btnReload = ghost("Reload");
+        btnReload.addActionListener(e -> loadSystemSettings());
+
+        JPanel headerRow = new JPanel(new BorderLayout());
+        headerRow.setOpaque(false);
+        headerRow.add(header, BorderLayout.WEST);
+        headerRow.add(btnReload, BorderLayout.EAST);
+
+        page.add(headerRow, BorderLayout.NORTH);
+
+        JPanel card = surfacePanel(new EmptyBorder(16, 16, 16, 16));
+        card.setLayout(new GridBagLayout());
+
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridx = 0;
+        g.weightx = 1;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.anchor = GridBagConstraints.NORTHWEST;
+
+        JLabel sectionTitle = new JLabel("Brand & Theme");
+        sectionTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
+        sectionTitle.setForeground(TEXT);
+
+        g.gridy = 0;
+        g.insets = new Insets(0, 0, 12, 0);
+        card.add(sectionTitle, g);
+
+        fSystemName = new JTextField();
+        styleField(fSystemName);
+
+        g.gridy = 1; g.insets = new Insets(0, 0, 6, 0);
+        card.add(fieldLabel("System name"), g);
+        g.gridy = 2; g.insets = new Insets(0, 0, 16, 0);
+        card.add(fSystemName, g);
+
+        logoPreview = new JLabel();
+        logoPreview.setPreferredSize(new Dimension(96, 96));
+        logoPreview.setHorizontalAlignment(SwingConstants.CENTER);
+        logoPreview.setBorder(BorderFactory.createLineBorder(BORDER, 1));
+
+        JButton btnUploadLogo = primaryOutline("Upload Logo");
+        btnUploadLogo.addActionListener(e -> chooseLogo());
+
+        JPanel logoRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        logoRow.setOpaque(false);
+        logoRow.add(logoPreview);
+        logoRow.add(btnUploadLogo);
+
+        g.gridy = 3; g.insets = new Insets(0, 0, 6, 0);
+        card.add(fieldLabel("Logo"), g);
+        g.gridy = 4; g.insets = new Insets(0, 0, 16, 0);
+        card.add(logoRow, g);
+
+        accentSwatch = new JPanel();
+        accentSwatch.setPreferredSize(new Dimension(48, 28));
+        accentSwatch.setBorder(BorderFactory.createLineBorder(BORDER, 1));
+
+        accentValue = new JLabel("#2055C5");
+        accentValue.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        accentValue.setForeground(MUTED);
+
+        JButton btnPickAccent = primaryOutline("Pick Color");
+        btnPickAccent.addActionListener(e -> chooseAccent());
+
+        JPanel accentRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        accentRow.setOpaque(false);
+        accentRow.add(accentSwatch);
+        accentRow.add(accentValue);
+        accentRow.add(btnPickAccent);
+
+        g.gridy = 5; g.insets = new Insets(0, 0, 6, 0);
+        card.add(fieldLabel("Accent color"), g);
+        g.gridy = 6; g.insets = new Insets(0, 0, 18, 0);
+        card.add(accentRow, g);
+
+        JButton btnSave = primary("Save Settings");
+        btnSave.addActionListener(e -> onSaveSystemSettings());
+
+        g.gridy = 7; g.insets = new Insets(0, 0, 0, 0);
+        card.add(btnSave, g);
+
+        page.add(card, BorderLayout.CENTER);
+
+        loadSystemSettings();
+        return page;
+    }
+
+    private void loadSystemSettings() {
+        fSystemName.setText(assetService.getShopNameOrDefault());
+        selectedAccent = assetService.getAccentColorOrDefault();
+        updateAccentPreview(selectedAccent);
+        selectedLogoBytes = null;
+        ImageIcon logo = assetService.getShopLogoOrNull(92);
+        if (logo != null) {
+            logoPreview.setIcon(logo);
+        } else {
+            logoPreview.setIcon(UIManager.getIcon("OptionPane.informationIcon"));
+        }
+    }
+
+    private void chooseLogo() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Choose logo image");
+        int result = chooser.showOpenDialog(this);
+        if (result != JFileChooser.APPROVE_OPTION) return;
+        try {
+            java.nio.file.Path path = chooser.getSelectedFile().toPath();
+            selectedLogoBytes = java.nio.file.Files.readAllBytes(path);
+            ImageIcon scaled = scaleLogo(selectedLogoBytes, 92);
+            if (scaled != null) {
+                logoPreview.setIcon(scaled);
+            } else {
+                JOptionPane.showMessageDialog(this, "Unsupported image format.");
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Unable to load logo: " + ex.getMessage());
+        }
+    }
+
+    private void chooseAccent() {
+        Color picked = JColorChooser.showDialog(this, "Pick Accent Color", selectedAccent);
+        if (picked == null) return;
+        selectedAccent = picked;
+        updateAccentPreview(picked);
+    }
+
+    private void updateAccentPreview(Color color) {
+        accentSwatch.setBackground(color);
+        accentValue.setText(String.format("#%02X%02X%02X", color.getRed(), color.getGreen(), color.getBlue()));
+    }
+
+    private void onSaveSystemSettings() {
+        String name = fSystemName.getText().trim();
+        if (name.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "System name cannot be empty.");
+            return;
+        }
+        try {
+            assetService.saveShopName(name);
+            assetService.saveAccentColor(selectedAccent);
+            if (selectedLogoBytes != null) {
+                assetService.saveShopLogo(selectedLogoBytes);
+            }
+            JOptionPane.showMessageDialog(this, "System settings updated. Re-open other views to apply changes.");
+        } catch (Exception ex) {
+            showDbError(ex);
+        }
+    }
+
+    private ImageIcon scaleLogo(byte[] data, int size) {
+        try {
+            java.awt.Image img = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(data));
+            if (img == null) return null;
+            java.awt.Image scaled = img.getScaledInstance(size, size, java.awt.Image.SCALE_SMOOTH);
+            return new ImageIcon(scaled);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
     // -------------------- Placeholders --------------------
 
     private JComponent buildCashierPage() {
@@ -720,6 +903,7 @@ public class OwnerFrame extends JFrame {
 
     private void styleField(JComponent c) {
         c.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        c.setBackground(Color.WHITE);
         c.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(222, 226, 230), 1),
                 new EmptyBorder(10, 12, 10, 12)
@@ -732,7 +916,7 @@ public class OwnerFrame extends JFrame {
         b.setFocusPainted(false);
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         b.setFont(new Font("SansSerif", Font.BOLD, 12));
-        b.setBackground(PRIMARY);
+        b.setBackground(primary);
         b.setForeground(Color.WHITE);
         b.setBorder(new EmptyBorder(10, 12, 10, 12));
         return b;
@@ -743,10 +927,10 @@ public class OwnerFrame extends JFrame {
         b.setFocusPainted(false);
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         b.setFont(new Font("SansSerif", Font.BOLD, 12));
-        b.setBackground(new Color(248, 249, 250));
-        b.setForeground(TEXT);
+        b.setBackground(Color.WHITE);
+        b.setForeground(primaryDark);
         b.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
+                BorderFactory.createLineBorder(primary, 1),
                 new EmptyBorder(10, 12, 10, 12)
         ));
         return b;
@@ -787,13 +971,37 @@ public class OwnerFrame extends JFrame {
         );
     }
 
+    private static Color tint(Color color, double amount) {
+        int r = clamp(color.getRed() + (int) ((255 - color.getRed()) * amount));
+        int g = clamp(color.getGreen() + (int) ((255 - color.getGreen()) * amount));
+        int b = clamp(color.getBlue() + (int) ((255 - color.getBlue()) * amount));
+        return new Color(r, g, b);
+    }
+
+    private static Color shade(Color color, double amount) {
+        int r = clamp(color.getRed() - (int) (255 * amount));
+        int g = clamp(color.getGreen() - (int) (255 * amount));
+        int b = clamp(color.getBlue() - (int) (255 * amount));
+        return new Color(r, g, b);
+    }
+
+    private static int clamp(int value) {
+        return Math.min(255, Math.max(0, value));
+    }
+
     // -------------------- Nav item component --------------------
 
     private static class NavItem extends JButton {
         private boolean selected;
+        private final Color accent;
+        private final Color accentSoft;
+        private final Color accentText;
 
-        NavItem(String text, Icon icon) {
+        NavItem(String text, Icon icon, Color accent, Color accentSoft, Color accentText) {
             super(text, icon);
+            this.accent = accent;
+            this.accentSoft = accentSoft;
+            this.accentText = accentText;
             setFocusPainted(false);
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             setHorizontalAlignment(SwingConstants.LEFT);
@@ -807,12 +1015,12 @@ public class OwnerFrame extends JFrame {
         public void setSelected(boolean selected) {
             this.selected = selected;
             if (selected) {
-                setBackground(new Color(232, 240, 255));
-                setForeground(new Color(18, 54, 120));
+                setBackground(accentSoft);
+                setForeground(accentText);
                 setOpaque(true);
             } else {
                 setBackground(Color.WHITE);
-                setForeground(new Color(33, 37, 41));
+                setForeground(new Color(30, 41, 59));
                 setOpaque(true);
             }
         }

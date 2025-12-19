@@ -1,5 +1,6 @@
 package app.ui;
 
+import app.db.AssetService;
 import app.db.MenuItemDAO;
 import app.db.OrderDAO;
 import app.model.MenuItem;
@@ -63,14 +64,16 @@ public class CashierPanel extends JPanel {
     private final OrderDAO orderDAO = new OrderDAO();
     private final Set<String> customizableCategories = Set.of("Coffee", "Tea", "Iced");
 
-    private static final Color BG = new Color(245, 247, 250);
+    private static final Color BG = new Color(243, 245, 249);
     private static final Color SURFACE = Color.WHITE;
-    private static final Color BORDER = new Color(233, 236, 239);
-    private static final Color TEXT = new Color(33, 37, 41);
-    private static final Color MUTED = new Color(108, 117, 125);
-    private static final Color PRIMARY = new Color(32, 85, 197);
-    private static final Color SUCCESS = new Color(32, 140, 99);
-    private static final Color WARN = new Color(255, 193, 7);
+    private static final Color BORDER = new Color(226, 232, 240);
+    private static final Color TEXT = new Color(30, 41, 59);
+    private static final Color MUTED = new Color(100, 116, 139);
+    private static final Color SUCCESS = new Color(22, 163, 74);
+    private static final Color WARN = new Color(234, 179, 8);
+
+    private final Color primary = new AssetService().getAccentColorOrDefault();
+    private final Color primarySoft = tint(primary, 0.88);
 
     private static final NumberFormat MONEY_PH = NumberFormat.getCurrencyInstance(new Locale("en", "PH"));
 
@@ -326,7 +329,7 @@ public class CashierPanel extends JPanel {
             if (idx >= 0 && idx < currentQueueView.size()) {
                 Order selected = currentQueueView.get(idx);
                 renderReceipt(selected);
-                setStatus("Previewing " + selected.getCode(), PRIMARY);
+                setStatus("Previewing " + selected.getCode(), primary);
             }
         });
         JScrollPane queueScroll = new JScrollPane(queueList);
@@ -391,13 +394,13 @@ public class CashierPanel extends JPanel {
             if (line.item.getCode().equals(item.getCode()) && line.options.equals(opts)) {
                 line.qty++;
                 refreshCartTable();
-                setStatus("Added another " + item.getName() + " (" + opts.label() + ")", PRIMARY);
+        setStatus("Added another " + item.getName() + " (" + opts.label() + ")", primary);
                 return;
             }
         }
         cart.add(new CartLine(item, opts, 1));
         refreshCartTable();
-        setStatus("Added " + item.getName() + " (" + opts.label() + ")", PRIMARY);
+        setStatus("Added " + item.getName() + " (" + opts.label() + ")", primary);
     }
 
     private void adjustQuantity(int delta) {
@@ -409,7 +412,7 @@ public class CashierPanel extends JPanel {
         CartLine line = cart.get(row);
         line.qty = Math.max(1, line.qty + delta);
         refreshCartTable();
-        setStatus("Updated quantity for " + line.item.getName(), PRIMARY);
+        setStatus("Updated quantity for " + line.item.getName(), primary);
     }
 
     private void removeSelectedItem() {
@@ -420,7 +423,7 @@ public class CashierPanel extends JPanel {
         }
         CartLine removed = cart.remove(row);
         refreshCartTable();
-        setStatus("Removed " + removed.item.getName(), PRIMARY);
+        setStatus("Removed " + removed.item.getName(), primary);
     }
 
     private void customizeSelectedItem() {
@@ -454,7 +457,7 @@ public class CashierPanel extends JPanel {
         }
 
         refreshCartTable();
-        setStatus("Updated options for " + line.item.getName() + " (" + updated.label() + ")", PRIMARY);
+        setStatus("Updated options for " + line.item.getName() + " (" + updated.label() + ")", primary);
     }
 
     private void checkout() {
@@ -555,7 +558,7 @@ public class CashierPanel extends JPanel {
 
         loadOrderIntoCart(target);
         renderReceipt(target);
-        setStatus("Editing order " + target.getCode() + " (update then Checkout & Queue)", PRIMARY);
+        setStatus("Editing order " + target.getCode() + " (update then Checkout & Queue)", primary);
     }
 
     private void loadOrderIntoCart(Order order) {
@@ -605,7 +608,7 @@ public class CashierPanel extends JPanel {
         boolean any = false;
         if (!matches.isEmpty()) {
             rebuildQueueList(matches);
-            setStatus("Found " + matches.size() + " matching active order(s)", PRIMARY);
+            setStatus("Found " + matches.size() + " matching active order(s)", primary);
             any = true;
         }
 
@@ -859,7 +862,7 @@ public class CashierPanel extends JPanel {
         orderQueue = new OrderQueue();
         if (previewMode) {
             refreshQueueList();
-            setStatus("Queue refreshed (preview mode)", PRIMARY);
+            setStatus("Queue refreshed (preview mode)", primary);
             return;
         }
         try {
@@ -870,7 +873,7 @@ public class CashierPanel extends JPanel {
                 }
             }
             refreshQueueList();
-            setStatus("Queue synced from database", PRIMARY);
+            setStatus("Queue synced from database", primary);
         } catch (Exception ex) {
             refreshQueueList();
             setStatus("Queue fallback (DB unavailable): " + ex.getMessage(), WARN);
@@ -903,7 +906,7 @@ public class CashierPanel extends JPanel {
         b.setFocusPainted(false);
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         b.setFont(new Font("SansSerif", Font.BOLD, 12));
-        b.setBackground(PRIMARY);
+        b.setBackground(primary);
         b.setForeground(Color.WHITE);
         b.setBorder(new EmptyBorder(10, 12, 10, 12));
         return b;
@@ -1006,7 +1009,7 @@ public class CashierPanel extends JPanel {
             lblName.setForeground(TEXT);
 
             lblPrice.setFont(new Font("SansSerif", Font.BOLD, 13));
-            lblPrice.setForeground(PRIMARY);
+            lblPrice.setForeground(primary);
 
             lblCategory.setFont(new Font("SansSerif", Font.PLAIN, 11));
             lblCategory.setForeground(MUTED);
@@ -1023,9 +1026,9 @@ public class CashierPanel extends JPanel {
             lblCategory.setText(value.getCategory());
 
             if (isSelected) {
-                setBackground(new Color(232, 240, 255));
+                setBackground(primarySoft);
                 setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(PRIMARY, 1),
+                        BorderFactory.createLineBorder(primary, 1),
                         new EmptyBorder(8, 10, 8, 10)
                 ));
             } else {
@@ -1034,5 +1037,16 @@ public class CashierPanel extends JPanel {
             }
             return this;
         }
+    }
+
+    private static Color tint(Color color, double amount) {
+        int r = clamp(color.getRed() + (int) ((255 - color.getRed()) * amount));
+        int g = clamp(color.getGreen() + (int) ((255 - color.getGreen()) * amount));
+        int b = clamp(color.getBlue() + (int) ((255 - color.getBlue()) * amount));
+        return new Color(r, g, b);
+    }
+
+    private static int clamp(int value) {
+        return Math.min(255, Math.max(0, value));
     }
 }

@@ -1,5 +1,6 @@
 package app.ui;
 
+import app.db.AssetService;
 import app.db.OrderDAO;
 import app.model.Order;
 import app.model.OrderItem;
@@ -45,14 +46,15 @@ public class BaristaPanel extends JPanel {
     private JButton btnServe;
     private JButton btnDetails;
 
-    private static final Color BG = new Color(245, 247, 250);
+    private static final Color BG = new Color(243, 245, 249);
     private static final Color SURFACE = Color.WHITE;
-    private static final Color BORDER = new Color(233, 236, 239);
-    private static final Color TEXT = new Color(33, 37, 41);
-    private static final Color MUTED = new Color(108, 117, 125);
-    private static final Color PRIMARY = new Color(32, 85, 197);
-    private static final Color SUCCESS = new Color(32, 140, 99);
-    private static final Color WARN = new Color(255, 193, 7);
+    private static final Color BORDER = new Color(226, 232, 240);
+    private static final Color TEXT = new Color(30, 41, 59);
+    private static final Color MUTED = new Color(100, 116, 139);
+    private static final Color SUCCESS = new Color(22, 163, 74);
+    private static final Color WARN = new Color(234, 179, 8);
+
+    private final Color primary = new AssetService().getAccentColorOrDefault();
 
     private static final NumberFormat MONEY_PH = NumberFormat.getCurrencyInstance(new Locale("en", "PH"));
 
@@ -303,7 +305,7 @@ public class BaristaPanel extends JPanel {
         }
 
         if ("IN_PROGRESS".equalsIgnoreCase(order.getStatus())) {
-            setStatus("Order already in progress", PRIMARY);
+            setStatus("Order already in progress", primary);
             return;
         }
         if ("COMPLETED".equalsIgnoreCase(order.getStatus())) {
@@ -345,7 +347,7 @@ public class BaristaPanel extends JPanel {
             queueList.setSelectedIndex(idx);
             queueList.ensureIndexIsVisible(idx);
         }
-        setStatus("Highlighted " + matches.size() + " matching order(s)", PRIMARY);
+        setStatus("Highlighted " + matches.size() + " matching order(s)", primary);
     }
 
     private void loadActiveQueueFromDatabase() {
@@ -356,7 +358,7 @@ public class BaristaPanel extends JPanel {
                 orderQueue.enqueue(order);
             }
             refreshQueueList();
-            setStatus("Queue synced from database" + (previewMode ? " (preview mode)" : ""), PRIMARY);
+            setStatus("Queue synced from database" + (previewMode ? " (preview mode)" : ""), primary);
         } catch (Exception ex) {
             refreshQueueList();
             setStatus("Queue fallback (DB unavailable): " + ex.getMessage(), WARN);
@@ -519,7 +521,7 @@ public class BaristaPanel extends JPanel {
 
     private JButton primary(String text) {
         JButton b = new JButton(text);
-        b.setBackground(PRIMARY);
+        b.setBackground(primary);
         b.setForeground(Color.WHITE);
         b.setFocusPainted(false);
         b.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
@@ -541,10 +543,10 @@ public class BaristaPanel extends JPanel {
     private JButton primaryOutline(String text) {
         JButton b = new JButton(text);
         b.setBackground(Color.WHITE);
-        b.setForeground(PRIMARY);
+        b.setForeground(primary);
         b.setFocusPainted(false);
         b.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(PRIMARY, 1),
+                BorderFactory.createLineBorder(primary, 1),
                 new EmptyBorder(9, 12, 9, 12)
         ));
         return b;

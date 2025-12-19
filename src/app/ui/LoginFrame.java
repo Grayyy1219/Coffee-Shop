@@ -21,6 +21,8 @@ public class LoginFrame extends JFrame {
 
     private final AssetService assetService = new AssetService();
     private final AuthService authService = new AuthService();
+    private final Color accent = assetService.getAccentColorOrDefault();
+    private final Color accentDark = shade(accent, 0.22);
 
     public LoginFrame() {
         setTitle("Login");
@@ -44,7 +46,7 @@ public class LoginFrame extends JFrame {
         card.setPreferredSize(new Dimension(520, 560));
 
         // Header
-        HeaderPanel header = new HeaderPanel(22);
+        HeaderPanel header = new HeaderPanel(22, accent, accentDark);
         header.setLayout(new GridBagLayout());
         header.setBorder(new EmptyBorder(22, 22, 18, 22));
 
@@ -188,7 +190,7 @@ public class LoginFrame extends JFrame {
     }
 
     private void setFieldBorder(JComponent field, boolean focused) {
-        Color line = focused ? new Color(32, 85, 197) : new Color(222, 226, 230);
+        Color line = focused ? accent : new Color(222, 226, 230);
         int thickness = focused ? 2 : 1;
         int pad = focused ? 9 : 10;
 
@@ -202,7 +204,7 @@ public class LoginFrame extends JFrame {
         b.setFocusPainted(false);
         b.setFont(new Font("SansSerif", Font.BOLD, 14));
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.setBackground(new Color(32, 85, 197));
+        b.setBackground(accent);
         b.setForeground(Color.WHITE);
         b.setOpaque(true);
         b.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14)); // hug content visually
@@ -313,9 +315,13 @@ public class LoginFrame extends JFrame {
     /** Gradient header bar that matches the card arc. */
     static class HeaderPanel extends JPanel {
         private final int arc;
+        private final Color start;
+        private final Color end;
 
-        HeaderPanel(int arc) {
+        HeaderPanel(int arc, Color start, Color end) {
             this.arc = arc;
+            this.start = start;
+            this.end = end;
             setOpaque(false);
         }
 
@@ -327,10 +333,7 @@ public class LoginFrame extends JFrame {
             int w = getWidth();
             int h = getHeight();
 
-            GradientPaint gp = new GradientPaint(
-                    0, 0, new Color(32, 85, 197),
-                    w, h, new Color(18, 54, 120)
-            );
+            GradientPaint gp = new GradientPaint(0, 0, start, w, h, end);
             g2.setPaint(gp);
 
             // draw slightly taller so the bottom looks smooth
@@ -339,5 +342,16 @@ public class LoginFrame extends JFrame {
             g2.dispose();
             super.paintComponent(g);
         }
+    }
+
+    private static Color shade(Color color, double amount) {
+        int r = clamp(color.getRed() - (int) (255 * amount));
+        int g = clamp(color.getGreen() - (int) (255 * amount));
+        int b = clamp(color.getBlue() - (int) (255 * amount));
+        return new Color(r, g, b);
+    }
+
+    private static int clamp(int value) {
+        return Math.min(255, Math.max(0, value));
     }
 }
