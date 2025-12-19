@@ -12,13 +12,25 @@ import app.util.SelectionSort;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.text.NumberFormat;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class OwnerFrame extends JFrame {
 
@@ -59,6 +71,8 @@ public class OwnerFrame extends JFrame {
     private JTextField menuSearchField;
     private JComboBox<String> menuCategoryFilter;
     private final java.util.List<MenuItem> menuItemsCache = new java.util.ArrayList<>();
+    private final Map<String, ImageIcon> menuImageCache = new HashMap<>();
+    private static final int MENU_IMAGE_SIZE = 56;
 
     // DASHBOARD: metric labels + table
     private JLabel lblTodaySales;
@@ -700,6 +714,9 @@ public class OwnerFrame extends JFrame {
         menuTable.setShowHorizontalLines(true);
         menuTable.setGridColor(new Color(241, 243, 245));
         menuTable.getTableHeader().setReorderingAllowed(false);
+        menuTable.setRowHeight(MENU_IMAGE_SIZE + 16);
+        menuTable.getColumnModel().getColumn(4).setCellRenderer(new MenuImageCellRenderer());
+        menuTable.getColumnModel().getColumn(4).setPreferredWidth(MENU_IMAGE_SIZE + 24);
 
         JScrollPane sp = new JScrollPane(menuTable);
         sp.setBorder(BorderFactory.createLineBorder(BORDER, 1));
@@ -729,6 +746,9 @@ public class OwnerFrame extends JFrame {
         styleField(fItemCategory);
         styleField(fItemPrice);
         styleField(fItemImageUrl);
+
+        JButton btnUploadImage = ghost("Upload");
+        btnUploadImage.addActionListener(e -> chooseMenuImage());
 
         JButton btnNew = ghost("New");
         JButton btnAdd = primary("Add Item");
@@ -782,9 +802,13 @@ public class OwnerFrame extends JFrame {
         right.add(fItemPrice, g);
 
         g.gridy = 9; g.insets = new Insets(0, 0, 6, 0);
-        right.add(fieldLabel("Image URL"), g);
+        right.add(fieldLabel("Image URL / Path"), g);
         g.gridy = 10; g.insets = new Insets(0, 0, 14, 0);
-        right.add(fItemImageUrl, g);
+        JPanel imageRow = new JPanel(new BorderLayout(8, 0));
+        imageRow.setOpaque(false);
+        imageRow.add(fItemImageUrl, BorderLayout.CENTER);
+        imageRow.add(btnUploadImage, BorderLayout.EAST);
+        right.add(imageRow, g);
 
         JPanel actions = new JPanel(new GridLayout(1, 4, 10, 10));
         actions.setOpaque(false);
@@ -808,6 +832,18 @@ public class OwnerFrame extends JFrame {
         return page;
     }
 
+    private void chooseMenuImage() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Choose product image");
+        chooser.setFileFilter(new FileNameExtensionFilter("Image files", "png", "jpg", "jpeg", "gif", "webp"));
+        int result = chooser.showOpenDialog(this);
+        if (result != JFileChooser.APPROVE_OPTION) return;
+        File selected = chooser.getSelectedFile();
+        if (selected != null) {
+            fItemImageUrl.setText(selected.getAbsolutePath());
+        }
+    }
+
     private void refreshMenuTableSafe() {
         try {
             refreshMenuTable();
@@ -820,6 +856,7 @@ public class OwnerFrame extends JFrame {
     private void refreshMenuTable() throws Exception {
         if (menuModel == null) return;
         menuItemsCache.clear();
+        menuImageCache.clear();
         menuItemsCache.addAll(menuItemDAO.findAll());
         updateMenuCategoryOptions();
         applyMenuFilter();
@@ -973,7 +1010,16 @@ public class OwnerFrame extends JFrame {
             JOptionPane.showMessageDialog(this, "Price must be greater than zero.");
             return null;
         }
-        return new MenuItem(code, name, category, price, imageUrl.isEmpty() ? null : imageUrl);
+        String storedImage = null;
+        if (!imageUrl.isEmpty()) {
+            try {
+                storedImage = storeMenuImage(imageUrl, code);
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(this, "Unable to save image locally:\n" + ex.getMessage());
+                return null;
+            }
+        }
+        return new MenuItem(code, name, category, price, storedImage);
     }
 
     private void selectRowByCode(String code) {
@@ -985,6 +1031,95 @@ public class OwnerFrame extends JFrame {
                 menuTable.scrollRectToVisible(menuTable.getCellRect(r, 0, true));
                 return;
             }
+        }
+    }
+
+    private String storeMenuImage(String source, String code) throws IOException {
+        String trimmed = source.trim();
+        if (trimmed.isEmpty()) return null;
+        Path imagesDir = Paths.get("assets", "menu-images");
+        Files.createDirectories(imagesDir);
+        String ext = extractImageExtension(trimmed);
+        String safeCode = code.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-");
+        Path target = imagesDir.resolve(safeCode + ext);
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+            URL url = new URL(trimmed);
+            try (InputStream stream = url.openStream()) {
+                Files.copy(stream, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } else {
+            Path sourcePath = Paths.get(trimmed).normalize();
+            if (sourcePath.equals(target.normalize())) {
+                return imagesDir.resolve(target.getFileName()).toString().replace('\\', '/');
+            }
+            if (!Files.exists(sourcePath)) {
+                throw new IOException("File not found: " + trimmed);
+            }
+            Files.copy(sourcePath, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+        return imagesDir.resolve(target.getFileName()).toString().replace('\\', '/');
+    }
+
+    private String extractImageExtension(String source) {
+        String lower = source.toLowerCase(Locale.ROOT);
+        int dot = lower.lastIndexOf('.');
+        if (dot > -1) {
+            String ext = lower.substring(dot);
+            if (ext.matches("\\.(png|jpg|jpeg|gif|webp)")) {
+                return ext;
+            }
+        }
+        return ".png";
+    }
+
+    private ImageIcon loadMenuImage(String path) {
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+        String key = path.trim();
+        if (menuImageCache.containsKey(key)) {
+            return menuImageCache.get(key);
+        }
+        ImageIcon icon;
+        try {
+            if (key.startsWith("http://") || key.startsWith("https://")) {
+                icon = new ImageIcon(new URL(key));
+            } else {
+                icon = new ImageIcon(key);
+            }
+            if (icon.getIconWidth() > 0) {
+                Image scaled = icon.getImage().getScaledInstance(MENU_IMAGE_SIZE, MENU_IMAGE_SIZE, Image.SCALE_SMOOTH);
+                icon = new ImageIcon(scaled);
+            } else {
+                icon = null;
+            }
+        } catch (Exception ex) {
+            icon = null;
+        }
+        menuImageCache.put(key, icon);
+        return icon;
+    }
+
+    private class MenuImageCellRenderer extends JLabel implements TableCellRenderer {
+        MenuImageCellRenderer() {
+            setHorizontalAlignment(SwingConstants.CENTER);
+            setVerticalAlignment(SwingConstants.CENTER);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            setText(null);
+            setIcon(loadMenuImage(value == null ? null : value.toString()));
+            if (isSelected) {
+                setBackground(menuTable.getSelectionBackground());
+                setForeground(menuTable.getSelectionForeground());
+            } else {
+                setBackground(menuTable.getBackground());
+                setForeground(menuTable.getForeground());
+            }
+            setOpaque(true);
+            return this;
         }
     }
 
