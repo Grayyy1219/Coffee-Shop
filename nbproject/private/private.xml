@@ -11,6 +11,12 @@
             <file>file:/C:/Users/lance/Documents/NetBeansProjects/Coffee-Shop/src/app/ui/OwnerFrame.java</file>
             <file>file:/C:/Users/lance/Documents/NetBeansProjects/Coffee-Shop/src/app/model/User.java</file>
             <file>file:/C:/Users/lance/Documents/NetBeansProjects/Coffee-Shop/src/app/db/UserDAO.java</file>
+            <file>file:/C:/Users/lance/Documents/NetBeansProjects/Coffee-Shop/src/app/model/DashboardSummary.java</file>
+            <file>file:/C:/Users/lance/Documents/NetBeansProjects/Coffee-Shop/src/app/model/DailySalesRow.java</file>
+            <file>file:/C:/Users/lance/Documents/NetBeansProjects/Coffee-Shop/src/app/db/DashboardDAO.java</file>
+            <file>file:/C:/Users/lance/Documents/NetBeansProjects/Coffee-Shop/src/app/ui/CashierPanel.java</file>
+            <file>file:/C:/Users/lance/Documents/NetBeansProjects/Coffee-Shop/docs/system_design.md</file>
+            <file>file:/C:/Users/lance/Documents/NetBeansProjects/Coffee-Shop/src/app/db/OrderDAO.java</file>
         </group>
     </open-files>
 </project-private>

@@ -168,6 +168,22 @@ public class OrderDAO {
         return out;
     }
 
+    public Integer findIdByCode(String code) throws Exception {
+        if (code == null || code.isBlank()) return null;
+        String sql = "SELECT id FROM orders WHERE code = ? LIMIT 1";
+        try (Connection con = DB.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, code);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("id");
+                }
+            }
+        }
+        return null;
+    }
+
     private Order mapOrder(ResultSet rs) throws SQLException {
         Order order = new Order();
         order.setId(rs.getInt("id"));

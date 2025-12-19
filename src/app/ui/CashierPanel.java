@@ -42,7 +42,7 @@ public class CashierPanel extends JPanel {
     private JTable cartTable;
 
     private final DefaultListModel<String> queueModel = new DefaultListModel<>();
-    private final OrderQueue orderQueue = new OrderQueue();
+    private OrderQueue orderQueue = new OrderQueue();
     private final List<Order> currentQueueView = new ArrayList<>();
     private Order editingOrder;
     private JList<String> queueList;
@@ -297,8 +297,12 @@ public class CashierPanel extends JPanel {
 
         JButton btnSearchQueue = ghost("Search Orders");
         btnSearchQueue.addActionListener(e -> searchActiveOrders());
-        JButton btnResetQueue = ghost("Reset Queue");
-        btnResetQueue.addActionListener(e -> refreshQueueList());
+        JButton btnResetQueue = ghost("Refresh Queue");
+        btnResetQueue.addActionListener(e -> {
+            orderSearchField.setText("");
+            orderCodeSearchField.setText("");
+            loadActiveQueueFromDatabase();
+        });
 
         JPanel queueSearchButtons = new JPanel(new GridLayout(1, 2, 8, 8));
         queueSearchButtons.setOpaque(false);
@@ -499,6 +503,12 @@ public class CashierPanel extends JPanel {
         boolean dbOk = true;
         if (!previewMode) {
             try {
+                if (editing && order.getId() == null) {
+                    Integer existingId = orderDAO.findIdByCode(order.getCode());
+                    if (existingId != null) {
+                        order.setId(existingId);
+                    }
+                }
                 if (editing && order.getId() != null) {
                     orderDAO.updateOrderWithItems(order);
                 } else {
@@ -506,6 +516,7 @@ public class CashierPanel extends JPanel {
                 }
             } catch (Exception ex) {
                 dbOk = false;
+                logError("Failed to save order " + order.getCode(), ex);
                 setStatus("DB issue while saving order: " + ex.getMessage() + " (queued locally)", WARN);
             }
         }
@@ -817,6 +828,11 @@ public class CashierPanel extends JPanel {
         lblStatus.setForeground(color);
     }
 
+    private void logError(String context, Exception ex) {
+        System.err.println("[CashierPanel] " + context);
+        ex.printStackTrace();
+    }
+
     // -------------------- Data seeding --------------------
 
     private void loadMenuFromDatabaseOrFallback() {
@@ -840,8 +856,10 @@ public class CashierPanel extends JPanel {
     }
 
     private void loadActiveQueueFromDatabase() {
+        orderQueue = new OrderQueue();
         if (previewMode) {
             refreshQueueList();
+            setStatus("Queue refreshed (preview mode)", PRIMARY);
             return;
         }
         try {
@@ -852,9 +870,7 @@ public class CashierPanel extends JPanel {
                 }
             }
             refreshQueueList();
-            if (!active.isEmpty()) {
-                setStatus("Loaded active orders from DB", PRIMARY);
-            }
+            setStatus("Queue synced from database", PRIMARY);
         } catch (Exception ex) {
             refreshQueueList();
             setStatus("Queue fallback (DB unavailable): " + ex.getMessage(), WARN);
