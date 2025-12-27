@@ -29,13 +29,14 @@ public final class LinearSearch {
     }
 
     /**
-     * Case-insensitive linear search across menu items by name.
+     * Case-insensitive linear search across menu items by code, name, or category.
      */
     public static List<MenuItem> searchMenuByName(List<MenuItem> items, String query) {
         String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
         return search(items, item ->
-                item.getName().toLowerCase(Locale.ROOT).contains(q)
-                        || item.getCategory().toLowerCase(Locale.ROOT).contains(q));
+                safeLower(item.getCode()).contains(q)
+                        || safeLower(item.getName()).contains(q)
+                        || safeLower(item.getCategory()).contains(q));
     }
 
     /**
@@ -48,5 +49,9 @@ public final class LinearSearch {
                 order.getCustomerName().toLowerCase(Locale.ROOT).contains(c)
                         && (code.isEmpty() || order.getCode().toLowerCase(Locale.ROOT).contains(code))
         );
+    }
+
+    private static String safeLower(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT);
     }
 }

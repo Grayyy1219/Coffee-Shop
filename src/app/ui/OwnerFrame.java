@@ -8,7 +8,7 @@ import app.model.DailySalesRow;
 import app.model.DashboardSummary;
 import app.model.MenuItem;
 import app.model.User;
-import app.util.SelectionSort;
+import app.util.InsertionSort;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -384,7 +384,7 @@ public class OwnerFrame extends JFrame {
                 } else {
                     comparator = (a, b) -> b.saleDate.compareTo(a.saleDate);
                 }
-                SelectionSort.sort(rows, comparator); // selection sort entry point for sales rows
+                InsertionSort.sort(rows, comparator); // insertion sort entry point for sales rows
             }
             for (DailySalesRow r : rows) {
                 dailySalesModel.addRow(new Object[]{

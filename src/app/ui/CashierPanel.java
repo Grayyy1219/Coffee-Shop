@@ -7,8 +7,8 @@ import app.model.MenuItem;
 import app.model.Order;
 import app.model.OrderItem;
 import app.model.OrderQueue;
+import app.util.InsertionSort;
 import app.util.LinearSearch;
-import app.util.SelectionSort;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -822,9 +822,9 @@ public class CashierPanel extends JPanel {
         List<MenuItem> results = LinearSearch.searchMenuByName(allMenuItems, q);
         String mode = menuSortMode == null ? "Name (A-Z)" : String.valueOf(menuSortMode.getSelectedItem());
         if ("Price (Low-High)".equals(mode)) {
-            SelectionSort.sort(results, Comparator.comparing(MenuItem::getPrice)); // selection sort entry point for menu price
+            InsertionSort.sort(results, Comparator.comparing(MenuItem::getPrice)); // insertion sort entry point for menu price
         } else {
-            SelectionSort.sort(results, Comparator.comparing(MenuItem::getName)); // selection sort entry point for menu names
+            InsertionSort.sort(results, Comparator.comparing(MenuItem::getName)); // insertion sort entry point for menu names
         }
         for (MenuItem m : results) {
             menuModel.addElement(m);
