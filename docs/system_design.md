@@ -131,3 +131,38 @@ Orders are added (enqueue), served (dequeue), and listed (traversal) using FIFO 
 Used when staff search for a specific order or menu item.
 • Insertion Sort:
 Used when sorting menu items by price or daily sales by time
+Additional “What If” Scenarios
+1) What if there are more customers than the queue can handle at once?
+• Situation: A sudden campus event causes 30+ students to line up.
+• Queue impact: Each new order is still enqueued to the Linked List queue.
+• System action:
+o The cashier continues adding orders (enqueue).
+o The baristas keep dequeuing from the front.
+• Benefit: The Linked List queue grows dynamically (no fixed size), preventing overflow.
+2) What if a customer changes or cancels an order?
+• Situation: Bernie wants to cancel #1010 before it’s prepared.
+• Search step: Linear Search finds #1010 in the queue.
+• Update action:
+o If not yet prepared, remove the node from the linked list.
+o The queue remains in order for all other customers.
+• Benefit: Search + linked list deletion allow safe removal without breaking FIFO order.
+3) What if there are more menu items and customers request “cheapest options”?
+• Situation: The menu expands to 50+ drinks and pastries.
+• Sort step: Insertion Sort is triggered when “Sort by Price” is selected.
+• Result: The cheapest items appear first, helping the cashier respond quickly.
+• Benefit: Even with more items, insertion sort keeps lists organized for quick selection.
+4) What if the owner needs to compare sales across multiple days?
+• Situation: The owner exports a week of sales records.
+• Sort step: Insertion Sort arranges daily totals from lowest to highest.
+• Example output (totals):
+o Monday – ₱12,500
+o Tuesday – ₱13,200
+o Wednesday – ₱10,900
+o Thursday – ₱14,100
+o Friday – ₱15,800
+• Benefit: Sorting highlights the most profitable days for staffing decisions.
+5) What if a customer asks about an item with a specific ingredient?
+• Situation: A customer asks for “anything with oat milk.”
+• Search step: Linear Search checks each menu item’s ingredient list.
+• Result: Items containing oat milk are shown immediately.
+• Benefit: Linear search provides simple, clear filtering without complex indexing.
