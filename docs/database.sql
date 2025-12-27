@@ -1,69 +1,74 @@
-DROP DATABASE IF EXISTS coffee_shop;
-CREATE DATABASE coffee_shop CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE coffee_shop;
 
-CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL DEFAULT 'staff'
-);
 
-INSERT INTO users (username, password, role) VALUES
-    ('owner', 'owner123', 'owner'),
-    ('barista', 'coffee!', 'barista'),
-    ('cashier', 'payme', 'cashier'),
-    ('manager', 'beans4dayz', 'owner');
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
 
-CREATE TABLE menu_items (
-    code VARCHAR(20) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    category VARCHAR(50) NOT NULL,
-    price DECIMAL(8,2) NOT NULL,
-    image_url VARCHAR(255)
-);
+CREATE TABLE `menu_items` (
+  `code` varchar(20) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `category` varchar(50) NOT NULL,
+  `price` decimal(8,2) NOT NULL,
+  `image_url` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO menu_items (code, name, category, price, image_url) VALUES
-    ('CF001', 'Espresso', 'Coffee', 95.00, 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=200&q=60'),
-    ('CF002', 'Latte', 'Coffee', 125.00, 'https://images.unsplash.com/photo-1481391032119-d89fee407e44?auto=format&fit=crop&w=200&q=60'),
-    ('CF003', 'Cappuccino', 'Coffee', 115.00, 'https://images.unsplash.com/photo-1504753793650-d4a2b783c15e?auto=format&fit=crop&w=200&q=60'),
-    ('CF004', 'Cold Brew', 'Coffee', 150.00, 'https://images.unsplash.com/photo-1507133750040-4a8f57021571?auto=format&fit=crop&w=200&q=60'),
-    ('CF005', 'Mocha', 'Coffee', 165.00, 'https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=200&q=60'),
-    ('TE001', 'Chai Tea', 'Tea', 110.00, 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&w=200&q=60'),
-    ('TE002', 'Green Tea', 'Tea', 95.00, 'https://images.unsplash.com/photo-1451748266029-0a7e0c0b4f25?auto=format&fit=crop&w=200&q=60'),
-    ('TE003', 'Matcha Latte', 'Tea', 145.00, 'https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&w=200&q=60'),
-    ('PA001', 'Butter Croissant', 'Pastry', 85.00, 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=200&q=60'),
-    ('PA002', 'Blueberry Muffin', 'Pastry', 90.00, 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&w=200&q=60'),
-    ('PA003', 'Almond Biscotti', 'Pastry', 80.00, 'https://images.unsplash.com/photo-1461009461138-4a388eae6ec5?auto=format&fit=crop&w=200&q=60'),
-    ('FD001', 'Avocado Toast', 'Food', 195.00, 'https://images.unsplash.com/photo-1484723091739-30a097e8f929?auto=format&fit=crop&w=200&q=60'),
-    ('FD002', 'Breakfast Sandwich', 'Food', 210.00, 'https://images.unsplash.com/photo-1482049016688-2d3e1b311543?auto=format&fit=crop&w=200&q=60'),
-    ('FD003', 'Bagel with Cream Cheese', 'Food', 125.00, 'https://images.unsplash.com/photo-1521305916504-4a1121188589?auto=format&fit=crop&w=200&q=60'),
-    ('FD004', 'Chicken Panini', 'Food', 235.00, 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=200&q=60');
+INSERT INTO `menu_items` (`code`, `name`, `category`, `price`, `image_url`) VALUES
+('CF001', 'Espresso', 'Coffee', 95.00, 'assets/menu-images/pa003.png'),
+('CF002', 'Latte', 'Coffee', 125.00, 'assets/menu-images/pa003.png'),
+('CF003', 'Cappuccino', 'Coffee', 115.00, 'assets/menu-images/pa003.png'),
+('CF004', 'Cold Brew', 'Coffee', 150.00, 'assets/menu-images/pa003.png'),
+('CF005', 'Mocha', 'Coffee', 165.00, 'assets/menu-images/pa003.png'),
+('CF007', 'Caramel Macchiato', 'Coffee', 110.00, 'assets/menu-images/pa003.png'),
+('FD001', 'Avocado Toast', 'Food', 195.00, 'assets/menu-images/food.png'),
+('FD002', 'Breakfast Sandwich', 'Food', 210.00, 'assets/menu-images/food.png'),
+('FD003', 'Bagel with Cream Cheese', 'Food', 125.00, 'assets/menu-images/food.png'),
+('FD004', 'Chicken Panini', 'Food', 235.00, 'assets/menu-images/food.png'),
+('FR001', 'Caramel Frappe', 'Frappe', 90.00, 'assets/menu-images/fr001.png'),
+('PA001', 'Butter Croissant', 'Pastry', 85.00, 'assets/menu-images/pastry.png'),
+('PA002', 'Blueberry Muffin', 'Pastry', 90.00, 'assets/menu-images/pastry.png'),
+('TE001', 'Chai Tea', 'Tea', 110.00, 'assets/menu-images/tea.png'),
+('TE002', 'Green Tea', 'Tea', 95.00, 'assets/menu-images/tea.png'),
+('TE003', 'Matcha Latte', 'Tea', 145.00, 'assets/menu-images/tea.png');
 
-CREATE TABLE orders (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    code VARCHAR(20) NOT NULL UNIQUE,
-    customer_name VARCHAR(100) NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-    subtotal DECIMAL(10,2) NOT NULL,
-    tax DECIMAL(10,2) NOT NULL,
-    total DECIMAL(10,2) NOT NULL,
-    paid BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+CREATE TABLE `orders` (
+  `id` int(11) NOT NULL,
+  `code` varchar(20) NOT NULL,
+  `customer_name` varchar(100) NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'PENDING',
+  `subtotal` decimal(10,2) NOT NULL,
+  `tax` decimal(10,2) NOT NULL,
+  `total` decimal(10,2) NOT NULL,
+  `paid` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE order_items (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    order_id INT NOT NULL,
-    item_code VARCHAR(20) NOT NULL,
-    item_name VARCHAR(100) NOT NULL,
-    options VARCHAR(100) DEFAULT '',
-    quantity INT NOT NULL,
-    unit_price DECIMAL(10,2) NOT NULL,
-    line_total DECIMAL(10,2) NOT NULL,
-    CONSTRAINT fk_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    CONSTRAINT fk_item FOREIGN KEY (item_code) REFERENCES menu_items(code)
-);
+INSERT INTO `orders` (`id`, `code`, `customer_name`, `status`, `subtotal`, `tax`, `total`, `paid`, `created_at`) VALUES
+(11, '#1007', 'Albert', 'COMPLETED', 135.00, 0.00, 135.00, 1, '2025-12-27 18:14:06'),
+(12, '#1008', 'Ryan', 'PENDING', 175.00, 0.00, 175.00, 0, '2025-12-27 18:21:45'),
+(13, '#1009', 'Nestor', 'PENDING', 120.00, 0.00, 120.00, 0, '2025-12-27 18:23:05'),
+(14, '#1010', 'Bernie', 'PENDING', 120.00, 0.00, 120.00, 0, '2025-12-27 18:37:29'),
+(15, '#1011', 'Rommel', 'PENDING', 175.00, 0.00, 175.00, 0, '2025-12-27 18:38:26'),
+(16, '#1012', 'Thea', 'PENDING', 155.00, 0.00, 155.00, 0, '2025-12-27 18:38:44');
+
+CREATE TABLE `order_items` (
+  `id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `item_code` varchar(20) NOT NULL,
+  `item_name` varchar(100) NOT NULL,
+  `options` varchar(100) DEFAULT '',
+  `quantity` int(11) NOT NULL,
+  `unit_price` decimal(10,2) NOT NULL,
+  `line_total` decimal(10,2) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `order_items` (`id`, `order_id`, `item_code`, `item_name`, `options`, `quantity`, `unit_price`, `line_total`) VALUES
+(45, 11, 'CF002', 'Latte', 'Medium • Hot', 1, 135.00, 135.00),
+(46, 12, 'CF005', 'Mocha', 'Medium • Hot', 1, 175.00, 175.00),
+(47, 13, 'TE001', 'Chai Tea', 'Medium • Hot', 1, 120.00, 120.00),
+(48, 14, 'CF007', 'Caramel Macchiato', 'Medium • Iced', 1, 120.00, 120.00),
+(49, 15, 'CF005', 'Mocha', 'Medium • Iced', 1, 175.00, 175.00),
+(50, 16, 'TE003', 'Matcha Latte', 'Medium • Hot', 1, 155.00, 155.00);
+
 CREATE TABLE `system_assets` (
   `asset_key` varchar(64) NOT NULL,
   `asset_blob` longblob NOT NULL
@@ -76,35 +81,73 @@ INSERT INTO `system_assets` (`asset_key`, `asset_blob`) VALUES
 INSERT INTO `system_assets` (`asset_key`, `asset_blob`) VALUES
 ('shop_name', 0x526974612042726577);
 
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `username` varchar(50) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `role` varchar(50) NOT NULL DEFAULT 'staff'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO orders (code, customer_name, status, subtotal, tax, total, paid, created_at) VALUES
-    ('ORD-2001', 'Jane Doe', 'PENDING', 14.40, 1.30, 15.70, FALSE, '2024-05-01 08:30:00'),
-    ('ORD-2002', 'Office Pickup', 'IN_PROGRESS', 18.80, 1.69, 20.49, FALSE, '2024-05-01 08:45:00'),
-    ('ORD-2003', 'Carlos M.', 'COMPLETED', 14.35, 1.22, 15.57, TRUE, '2024-05-01 09:15:00'),
-    ('ORD-2004', 'Walk-in', 'COMPLETED', 10.70, 0.96, 11.66, TRUE, '2024-05-02 10:00:00');
+INSERT INTO `users` (`id`, `username`, `password`, `role`) VALUES
+(1, 'owner', 'owner123', 'owner'),
+(2, 'barista', 'coffee!', 'barista'),
+(3, 'cashier', 'payme', 'cashier'),
+(4, 'manager', 'beans4dayz', 'owner');
 
-INSERT INTO order_items (order_id, item_code, item_name, options, quantity, unit_price, line_total) VALUES
-    (1, 'CF005', 'Mocha', 'Oat milk', 1, 4.95, 4.95),
-    (1, 'PA001', 'Butter Croissant', '', 1, 2.95, 2.95),
-    (1, 'FD001', 'Avocado Toast', 'Extra chili flakes', 1, 6.50, 6.50),
+CREATE TABLE `user_security` (
+  `user_id` int(11) NOT NULL,
+  `failed_attempts` int(11) NOT NULL DEFAULT 0,
+  `locked` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-    (2, 'CF002', 'Latte', 'Almond milk', 2, 4.25, 8.50),
-    (2, 'TE003', 'Matcha Latte', '', 1, 4.10, 4.10),
-    (2, 'PA002', 'Blueberry Muffin', 'Heated', 2, 3.10, 6.20),
+INSERT INTO `user_security` (`user_id`, `failed_attempts`, `locked`) VALUES
+(2, 0, 0),
+(3, 0, 0);
 
-    (3, 'CF004', 'Cold Brew', 'Light ice', 1, 4.75, 4.75),
-    (3, 'FD002', 'Breakfast Sandwich', 'No cheese', 1, 6.95, 6.95),
-    (3, 'PA003', 'Almond Biscotti', '', 1, 2.65, 2.65),
+CREATE TABLE `v_daily_sales` (
+`sale_date` date
+,`gross_total` decimal(32,2)
+,`paid_total` decimal(32,2)
+,`order_count` bigint(21)
+);
 
-    (4, 'CF001', 'Espresso', 'Double shot', 1, 3.00, 3.00),
-    (4, 'FD003', 'Bagel with Cream Cheese', 'Toasted', 1, 3.95, 3.95),
-    (4, 'TE001', 'Chai Tea', '', 1, 3.75, 3.75);
+DROP TABLE IF EXISTS `v_daily_sales`;
 
-CREATE OR REPLACE VIEW v_daily_sales AS
-SELECT DATE(created_at) AS sale_date,
-       SUM(total) AS gross_total,
-       SUM(CASE WHEN paid THEN total ELSE 0 END) AS paid_total,
-       COUNT(*) AS order_count
-FROM orders
-GROUP BY DATE(created_at)
-ORDER BY sale_date;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_daily_sales`  AS SELECT cast(`orders`.`created_at` as date) AS `sale_date`, sum(`orders`.`total`) AS `gross_total`, sum(case when `orders`.`paid` then `orders`.`total` else 0 end) AS `paid_total`, count(0) AS `order_count` FROM `orders` GROUP BY cast(`orders`.`created_at` as date) ORDER BY cast(`orders`.`created_at` as date) ASC ;
+
+ALTER TABLE `menu_items`
+  ADD PRIMARY KEY (`code`);
+
+ALTER TABLE `orders`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `code` (`code`);
+
+ALTER TABLE `order_items`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_order` (`order_id`),
+  ADD KEY `fk_item` (`item_code`);
+
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `username` (`username`);
+
+ALTER TABLE `user_security`
+  ADD PRIMARY KEY (`user_id`);
+
+ALTER TABLE `orders`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+
+ALTER TABLE `order_items`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
+
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+ALTER TABLE `order_items`
+  ADD CONSTRAINT `fk_item` FOREIGN KEY (`item_code`) REFERENCES `menu_items` (`code`),
+  ADD CONSTRAINT `fk_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE;
+
+ALTER TABLE `user_security`
+  ADD CONSTRAINT `fk_user_security_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+COMMIT;
+
