@@ -384,7 +384,9 @@ public class OwnerFrame extends JFrame {
                 } else {
                     comparator = (a, b) -> b.saleDate.compareTo(a.saleDate);
                 }
-                InsertionSort.sort(rows, comparator); // insertion sort entry point for sales rows
+                // Insertion sort triggered when owner views sorted sales rows (dashboard).
+                // The DB rows are loaded into a List first, then sorted in-place.
+                InsertionSort.sort(rows, comparator);
             }
             for (DailySalesRow r : rows) {
                 dailySalesModel.addRow(new Object[]{

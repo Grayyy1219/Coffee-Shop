@@ -13,6 +13,8 @@ public class OrderQueue {
     private Node<Order> tail;
     private int size;
 
+    // Enqueue (FIFO): used when a new order is placed (CashierPanel checkout).
+    // Implementation detail: append to the tail so earlier orders stay at the head.
     public boolean enqueue(Order order) {
         if (size >= MAX_SIZE) return false;
         Node<Order> node = new Node<>(order);
@@ -27,6 +29,8 @@ public class OrderQueue {
         return true;
     }
 
+    // Dequeue (FIFO): used when the barista serves the next order (BaristaPanel serve).
+    // Implementation detail: remove from the head to keep "first in, first out".
     public Order dequeue() {
         if (head == null) return null;
         Order data = head.data;
@@ -72,6 +76,8 @@ public class OrderQueue {
         return size;
     }
 
+    // Traversal: used to list all current orders in the queue UI panels.
+    // Implementation detail: walk linked nodes from head -> tail and collect into a List.
     public List<Order> traverse() {
         List<Order> out = new ArrayList<>();
         Node<Order> current = head;

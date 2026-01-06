@@ -530,6 +530,8 @@ public class CashierPanel extends JPanel {
             }
         }
 
+        // Enqueue happens here when the cashier checks out and adds a new order to FIFO.
+        // The new order becomes the tail so earlier orders remain at the head.
         boolean accepted = orderQueue.enqueue(order);
         if (!accepted) {
             setStatus("Queue full (50). Serve some orders first.", WARN);
@@ -591,7 +593,8 @@ public class CashierPanel extends JPanel {
     private void searchActiveOrders() {
         String customerQ = orderSearchField.getText() == null ? "" : orderSearchField.getText();
         String codeQ = orderCodeSearchField.getText() == null ? "" : orderCodeSearchField.getText();
-        // Linear search entry point for active orders in the queue
+        // Linear search entry point for active orders (triggered by Search button in queue panel).
+        // Uses the in-memory queue traversal to scan each order one-by-one.
         List<Order> matches = LinearSearch.search(orderQueue.traverse(), o ->
                 o.getCustomerName().toLowerCase(Locale.ROOT).contains(customerQ.trim().toLowerCase(Locale.ROOT))
                         && (codeQ.isBlank() || (o.getCode() != null && o.getCode().toLowerCase(Locale.ROOT).contains(codeQ.trim().toLowerCase(Locale.ROOT))))
@@ -601,7 +604,8 @@ public class CashierPanel extends JPanel {
         if (!previewMode) {
             try {
                 List<Order> historySource = orderDAO.searchOrders(customerQ.trim(), codeQ.trim(), 50);
-                // Linear search entry point for order history (DB-backed)
+                // Linear search entry point for order history (triggered by Search button, DB-backed).
+                // Even after the DB query, we still linearly scan the returned list.
                 historyMatches = LinearSearch.search(historySource, o ->
                         o.getCustomerName().toLowerCase(Locale.ROOT).contains(customerQ.trim().toLowerCase(Locale.ROOT))
                                 && (codeQ.isBlank() || (o.getCode() != null && o.getCode().toLowerCase(Locale.ROOT).contains(codeQ.trim().toLowerCase(Locale.ROOT))))
@@ -661,6 +665,8 @@ public class CashierPanel extends JPanel {
     }
 
     private void refreshQueueList() {
+        // Traversal used here to list all current orders in the cashier queue view.
+        // The linked-list queue is converted to a List for the Swing JList model.
         rebuildQueueList(orderQueue.traverse());
     }
 
@@ -818,13 +824,18 @@ public class CashierPanel extends JPanel {
 
     private void filterMenu(String q) {
         menuModel.clear();
-        // Linear search entry point for the menu filter
+        // Linear search entry point for the menu filter (triggered when typing/searching menu).
+        // Iterates through allMenuItems and keeps those whose code/name/category match.
         List<MenuItem> results = LinearSearch.searchMenuByName(allMenuItems, q);
         String mode = menuSortMode == null ? "Name (A-Z)" : String.valueOf(menuSortMode.getSelectedItem());
         if ("Price (Low-High)".equals(mode)) {
-            InsertionSort.sort(results, Comparator.comparing(MenuItem::getPrice)); // insertion sort entry point for menu price
+            // Insertion sort triggered when viewing menu sorted by price.
+            // The filtered results are sorted in-place before rendering.
+            InsertionSort.sort(results, Comparator.comparing(MenuItem::getPrice));
         } else {
-            InsertionSort.sort(results, Comparator.comparing(MenuItem::getName)); // insertion sort entry point for menu names
+            // Insertion sort triggered when viewing menu sorted by name.
+            // The filtered results are sorted in-place before rendering.
+            InsertionSort.sort(results, Comparator.comparing(MenuItem::getName));
         }
         for (MenuItem m : results) {
             menuModel.addElement(m);

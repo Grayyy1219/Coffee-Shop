@@ -292,6 +292,8 @@ public class BaristaPanel extends JPanel {
             }
         }
 
+        // Dequeue happens here after the barista confirms serving the next order.
+        // This removes the head of the linked-list queue (FIFO: oldest order first).
         orderQueue.dequeue();
         refreshQueueList();
         setStatus("Served " + (next.getCode() == null ? "order" : next.getCode()), SUCCESS);
@@ -331,6 +333,8 @@ public class BaristaPanel extends JPanel {
         String customerQ = searchCustomer.getText() == null ? "" : searchCustomer.getText();
         String codeQ = searchCode.getText() == null ? "" : searchCode.getText();
 
+        // Linear search triggered by the Search button in the barista queue panel.
+        // Searches the current queue (linked list) for matching customer name/code.
         List<Order> matches = LinearSearch.search(orderQueue.traverse(), o ->
                 o.getCustomerName().toLowerCase(Locale.ROOT).contains(customerQ.trim().toLowerCase(Locale.ROOT))
                         && (codeQ.isBlank() || (o.getCode() != null && o.getCode().toLowerCase(Locale.ROOT).contains(codeQ.trim().toLowerCase(Locale.ROOT))))
@@ -355,6 +359,8 @@ public class BaristaPanel extends JPanel {
         try {
             List<Order> active = orderDAO.loadActiveOrders(OrderQueue.MAX_SIZE);
             for (Order order : active) {
+                // Enqueue during DB sync: each active order is appended to the queue.
+                // This preserves the DB order so the UI shows oldest -> newest.
                 orderQueue.enqueue(order);
             }
             refreshQueueList();
@@ -372,6 +378,8 @@ public class BaristaPanel extends JPanel {
     // -------------------- UI updates --------------------
 
     private void refreshQueueList() {
+        // Traversal here rebuilds the UI list from the linked-list queue.
+        // The linked nodes are copied into a List so Swing can render them.
         rebuildQueueList(orderQueue.traverse());
     }
 
