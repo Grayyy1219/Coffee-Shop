@@ -64,6 +64,7 @@ public class CashierPanel extends JPanel {
     private JTextField orderCodeSearchField;
     private JComboBox<String> menuSortMode;
     private JTextField menuSearchField;
+    private int hoveredMenuIndex = -1;
 
     private int orderCounter = 1000;
 
@@ -81,10 +82,16 @@ public class CashierPanel extends JPanel {
     private static final Color TABLE_HEADER_BG = new Color(15, 23, 42);
     private static final Color TABLE_HEADER_TEXT = new Color(226, 232, 240);
     private static final Color TABLE_ROW_ALT = new Color(248, 250, 252);
+    private static final Color MENU_PANEL_BG = new Color(247, 249, 252);
+    private static final Color MENU_PANEL_BORDER = new Color(226, 232, 240);
+    private static final Color MENU_LIST_BG = new Color(242, 246, 251);
+    private static final Color MENU_CARD_TOP = new Color(255, 255, 255);
+    private static final Color MENU_CARD_BOTTOM = new Color(241, 245, 249);
 
     private final Color primary = new AssetService().getAccentColorOrDefault();
     private final Color primarySoft = tint(primary, 0.88);
     private final Color tableSelection = tint(primary, 0.74);
+    private final Color menuAccent = primary;
 
     private static final NumberFormat MONEY_PH = NumberFormat.getCurrencyInstance(new Locale("en", "PH"));
     private static final int MENU_IMAGE_SIZE = 54;
@@ -148,21 +155,21 @@ public class CashierPanel extends JPanel {
         root.setBorder(new EmptyBorder(14, 14, 14, 14));
 
         // Left: menu + search
-        JPanel menuPanel = surface(new EmptyBorder(14, 14, 14, 14));
+        JPanel menuPanel = menuSurface(new EmptyBorder(16, 16, 16, 16));
         menuPanel.setLayout(new BorderLayout(10, 10));
-        menuPanel.setPreferredSize(new Dimension(380, 10));
+        menuPanel.setPreferredSize(new Dimension(550, 10));
 
         JLabel menuTitle = new JLabel("Menu");
-        menuTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
-        menuTitle.setForeground(TEXT);
+        menuTitle.setFont(new Font("SansSerif", Font.BOLD, 16));
+        menuTitle.setForeground(menuAccent);
 
         menuSearchField = new JTextField();
         menuSearchField.setToolTipText("Search menu items");
-        styleField(menuSearchField);
+        styleMenuField(menuSearchField);
 
         menuSortMode = new JComboBox<>(new String[]{"Name (A-Z)", "Price (Low-High)"});
         menuSortMode.setToolTipText("Selection sort: name or price");
-        styleField(menuSortMode);
+        styleMenuField(menuSortMode);
         menuSortMode.addActionListener(e -> filterMenu(menuSearchField.getText()));
 
         menuSearchField.getDocument().addDocumentListener(new DocumentListener() {
@@ -183,16 +190,46 @@ public class CashierPanel extends JPanel {
         JList<MenuItem> menuList = new JList<>(menuModel);
         menuList.setCellRenderer(new MenuItemRenderer());
         menuList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        menuList.setFixedCellHeight(86);
+        menuList.setFixedCellHeight(90);
+        menuList.setFixedCellWidth(250);
+        menuList.setLayoutOrientation(JList.VERTICAL);
+        menuList.setVisibleRowCount(0);
+        menuList.setBackground(MENU_LIST_BG);
+        menuList.setForeground(TEXT);
+        menuList.setOpaque(true);
+        menuList.setBorder(new EmptyBorder(4, 4, 4, 4));
         menuList.addListSelectionListener(e -> {
             if (e.getValueIsAdjusting()) return;
             MenuItem item = menuList.getSelectedValue();
             if (item != null) addItemToCart(item);
             menuList.clearSelection();
         });
+        menuList.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(java.awt.event.MouseEvent e) {
+                int index = menuList.locationToIndex(e.getPoint());
+                if (index != hoveredMenuIndex) {
+                    hoveredMenuIndex = index;
+                    menuList.repaint();
+                }
+            }
+        });
+        menuList.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                if (hoveredMenuIndex != -1) {
+                    hoveredMenuIndex = -1;
+                    menuList.repaint();
+                }
+            }
+        });
 
         JScrollPane menuScroll = new JScrollPane(menuList);
-        menuScroll.setBorder(BorderFactory.createLineBorder(BORDER, 1));
+        menuScroll.getViewport().setBackground(MENU_LIST_BG);
+        menuScroll.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(MENU_PANEL_BORDER, 1),
+                new EmptyBorder(6, 6, 6, 6)
+        ));
 
         menuPanel.add(menuHeader, BorderLayout.NORTH);
         menuPanel.add(menuScroll, BorderLayout.CENTER);
@@ -931,6 +968,16 @@ public class CashierPanel extends JPanel {
         return p;
     }
 
+    private JPanel menuSurface(EmptyBorder padding) {
+        JPanel p = new JPanel();
+        p.setBackground(MENU_PANEL_BG);
+        p.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(MENU_PANEL_BORDER, 1),
+                padding
+        ));
+        return p;
+    }
+
     private void styleField(JComponent c) {
         c.setFont(new Font("SansSerif", Font.PLAIN, 13));
         c.setBackground(new Color(248, 250, 255));
@@ -947,6 +994,33 @@ public class CashierPanel extends JPanel {
     private Border buildFieldBorder(boolean focused) {
         Color glow = new Color(primary.getRed(), primary.getGreen(), primary.getBlue(), focused ? 160 : 70);
         Color line = focused ? primary : BORDER;
+        int thickness = focused ? 2 : 1;
+        int pad = focused ? 9 : 10;
+        return BorderFactory.createCompoundBorder(
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(glow, focused ? 3 : 1),
+                        BorderFactory.createLineBorder(line, thickness)
+                ),
+                new EmptyBorder(pad, 12, pad, 12)
+        );
+    }
+
+    private void styleMenuField(JComponent c) {
+        c.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        c.setBackground(MENU_LIST_BG);
+        c.setForeground(TEXT);
+        c.setOpaque(true);
+        c.setBorder(buildMenuFieldBorder(false));
+        c.setPreferredSize(new Dimension(10, 44));
+        c.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override public void focusGained(java.awt.event.FocusEvent e) { c.setBorder(buildMenuFieldBorder(true)); }
+            @Override public void focusLost(java.awt.event.FocusEvent e) { c.setBorder(buildMenuFieldBorder(false)); }
+        });
+    }
+
+    private Border buildMenuFieldBorder(boolean focused) {
+        Color glow = new Color(menuAccent.getRed(), menuAccent.getGreen(), menuAccent.getBlue(), focused ? 160 : 70);
+        Color line = focused ? menuAccent : MENU_PANEL_BORDER;
         int thickness = focused ? 2 : 1;
         int pad = focused ? 9 : 10;
         return BorderFactory.createCompoundBorder(
@@ -1113,19 +1187,24 @@ public class CashierPanel extends JPanel {
         private final JLabel lblName = new JLabel();
         private final JLabel lblPrice = new JLabel();
         private final JLabel lblCategory = new JLabel();
+        private boolean highlighted;
 
         MenuItemRenderer() {
             setLayout(new BorderLayout(12, 0));
             setBorder(new EmptyBorder(12, 12, 12, 12));
-            setOpaque(true);
+            setOpaque(false);
 
             lblImage.setPreferredSize(new Dimension(MENU_IMAGE_SIZE, MENU_IMAGE_SIZE));
+            lblImage.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(menuAccent.getRed(), menuAccent.getGreen(), menuAccent.getBlue(), 90), 1),
+                    new EmptyBorder(2, 2, 2, 2)
+            ));
 
             lblName.setFont(new Font("SansSerif", Font.BOLD, 13));
             lblName.setForeground(TEXT);
 
             lblPrice.setFont(new Font("SansSerif", Font.BOLD, 13));
-            lblPrice.setForeground(primary);
+            lblPrice.setForeground(menuAccent);
 
             lblCategory.setFont(new Font("SansSerif", Font.PLAIN, 11));
             lblCategory.setForeground(MUTED);
@@ -1148,18 +1227,32 @@ public class CashierPanel extends JPanel {
             lblPrice.setText(MONEY_PH.format(value.getPrice()));
             lblCategory.setText(value.getCategory());
             lblImage.setIcon(loadMenuImage(value.getImageUrl()));
-
-            if (isSelected) {
-                setBackground(primarySoft);
-                setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(primary, 1),
-                        new EmptyBorder(12, 12, 12, 12)
-                ));
-            } else {
-                setBackground(Color.WHITE);
-                setBorder(new EmptyBorder(12, 12, 12, 12));
-            }
+            highlighted = index == hoveredMenuIndex;
             return this;
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth();
+            int h = getHeight();
+            int arc = 20;
+            Color top = highlighted ? tint(primary, 0.86) : MENU_CARD_TOP;
+            Color bottom = highlighted ? tint(primary, 0.94) : MENU_CARD_BOTTOM;
+            GradientPaint paint = new GradientPaint(0, 0, top, 0, h, bottom);
+            g2.setPaint(paint);
+            g2.fillRoundRect(4, 3, w - 8, h - 6, arc, arc);
+            g2.setColor(highlighted ? menuAccent : MENU_PANEL_BORDER);
+            g2.setStroke(new BasicStroke(1.4f));
+            g2.drawRoundRect(4, 3, w - 8, h - 6, arc, arc);
+            if (highlighted) {
+                g2.setColor(new Color(menuAccent.getRed(), menuAccent.getGreen(), menuAccent.getBlue(), 90));
+                g2.setStroke(new BasicStroke(3f));
+                g2.drawRoundRect(2, 1, w - 4, h - 2, arc + 4, arc + 4);
+            }
+            g2.dispose();
         }
     }
 
