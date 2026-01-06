@@ -15,6 +15,8 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.net.URL;
@@ -75,9 +77,13 @@ public class CashierPanel extends JPanel {
     private static final Color MUTED = new Color(100, 116, 139);
     private static final Color SUCCESS = new Color(22, 163, 74);
     private static final Color WARN = new Color(234, 179, 8);
+    private static final Color TABLE_HEADER_BG = new Color(15, 23, 42);
+    private static final Color TABLE_HEADER_TEXT = new Color(226, 232, 240);
+    private static final Color TABLE_ROW_ALT = new Color(248, 250, 252);
 
     private final Color primary = new AssetService().getAccentColorOrDefault();
     private final Color primarySoft = tint(primary, 0.88);
+    private final Color tableSelection = tint(primary, 0.74);
 
     private static final NumberFormat MONEY_PH = NumberFormat.getCurrencyInstance(new Locale("en", "PH"));
     private static final int MENU_IMAGE_SIZE = 54;
@@ -203,7 +209,7 @@ public class CashierPanel extends JPanel {
         };
         cartTable = new JTable(cartModel);
         cartTable.setRowHeight(28);
-        cartTable.getTableHeader().setReorderingAllowed(false);
+        styleTable(cartTable);
 
         JScrollPane cartScroll = new JScrollPane(cartTable);
         cartScroll.setBorder(BorderFactory.createLineBorder(BORDER, 1));
@@ -1024,6 +1030,62 @@ public class CashierPanel extends JPanel {
             result = 31 * result + (lessSugar ? 1 : 0);
             result = 31 * result + note.hashCode();
             return result;
+        }
+    }
+
+    private void styleTable(JTable table) {
+        table.setBackground(SURFACE);
+        table.setForeground(TEXT);
+        table.setShowHorizontalLines(false);
+        table.setShowVerticalLines(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setGridColor(BORDER);
+        table.setFillsViewportHeight(true);
+        table.setSelectionBackground(tableSelection);
+        table.setSelectionForeground(TEXT);
+        table.setDefaultRenderer(Object.class, new ZebraTableCellRenderer());
+
+        JTableHeader header = table.getTableHeader();
+        header.setReorderingAllowed(false);
+        header.setPreferredSize(new Dimension(header.getPreferredSize().width, 34));
+        header.setDefaultRenderer(new HeaderRenderer());
+        header.setBackground(TABLE_HEADER_BG);
+        header.setForeground(TABLE_HEADER_TEXT);
+    }
+
+    private class HeaderRenderer implements TableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            JLabel l = new JLabel(value == null ? "" : value.toString());
+            l.setOpaque(true);
+            l.setBackground(TABLE_HEADER_BG);
+            l.setForeground(TABLE_HEADER_TEXT);
+            l.setFont(new Font("SansSerif", Font.BOLD, 12));
+            l.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER),
+                    new EmptyBorder(6, 10, 6, 10)
+            ));
+            return l;
+        }
+    }
+
+    private class ZebraTableCellRenderer extends javax.swing.table.DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            if (isSelected) {
+                c.setBackground(tableSelection);
+                c.setForeground(TEXT);
+            } else {
+                c.setBackground(row % 2 == 0 ? SURFACE : TABLE_ROW_ALT);
+                c.setForeground(TEXT);
+            }
+            if (c instanceof JComponent) {
+                ((JComponent) c).setBorder(new EmptyBorder(6, 10, 6, 10));
+            }
+            return c;
         }
     }
 

@@ -14,6 +14,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.io.File;
@@ -102,10 +103,14 @@ public class OwnerFrame extends JFrame {
     private static final Color TEXT = new Color(30, 41, 59);
     private static final Color MUTED = new Color(100, 116, 139);
     private static final Color DANGER = new Color(220, 38, 38);
+    private static final Color TABLE_HEADER_BG = new Color(15, 23, 42);
+    private static final Color TABLE_HEADER_TEXT = new Color(226, 232, 240);
+    private static final Color TABLE_ROW_ALT = new Color(248, 250, 252);
     private final AssetService assetService = new AssetService();
     private final Color primary = assetService.getAccentColorOrDefault();
     private final Color primaryDark = shade(primary, 0.2);
     private final Color primarySoft = tint(primary, 0.86);
+    private final Color tableSelection = tint(primary, 0.72);
     private final String ownerUsername;
 
     public OwnerFrame(String ownerUsername) {
@@ -339,7 +344,7 @@ public class OwnerFrame extends JFrame {
 
         JTable table = new JTable(dailySalesModel);
         table.setRowHeight(28);
-        table.getTableHeader().setReorderingAllowed(false);
+        styleTable(table);
 
         JScrollPane sp = new JScrollPane(table);
         sp.setBorder(BorderFactory.createLineBorder(BORDER, 1));
@@ -431,9 +436,7 @@ public class OwnerFrame extends JFrame {
 
         usersTable = new JTable(usersModel);
         usersTable.setRowHeight(30);
-        usersTable.setShowHorizontalLines(true);
-        usersTable.setGridColor(new Color(241, 243, 245));
-        usersTable.getTableHeader().setReorderingAllowed(false);
+        styleTable(usersTable);
         usersTable.setDefaultRenderer(Object.class, new LockedUserRenderer());
 
         JScrollPane sp = new JScrollPane(usersTable);
@@ -762,10 +765,8 @@ public class OwnerFrame extends JFrame {
 
         menuTable = new JTable(menuModel);
         menuTable.setRowHeight(30);
-        menuTable.setShowHorizontalLines(true);
-        menuTable.setGridColor(new Color(241, 243, 245));
-        menuTable.getTableHeader().setReorderingAllowed(false);
         menuTable.setRowHeight(MENU_IMAGE_SIZE + 16);
+        styleTable(menuTable);
         menuTable.getColumnModel().getColumn(4).setCellRenderer(new MenuImageCellRenderer());
         menuTable.getColumnModel().getColumn(4).setPreferredWidth(MENU_IMAGE_SIZE + 24);
 
@@ -1163,13 +1164,14 @@ public class OwnerFrame extends JFrame {
             setText(null);
             setIcon(loadMenuImage(value == null ? null : value.toString()));
             if (isSelected) {
-                setBackground(menuTable.getSelectionBackground());
-                setForeground(menuTable.getSelectionForeground());
+                setBackground(tableSelection);
+                setForeground(TEXT);
             } else {
-                setBackground(menuTable.getBackground());
-                setForeground(menuTable.getForeground());
+                setBackground(row % 2 == 0 ? SURFACE : TABLE_ROW_ALT);
+                setForeground(TEXT);
             }
             setOpaque(true);
+            setBorder(new EmptyBorder(6, 10, 6, 10));
             return this;
         }
     }
@@ -1481,6 +1483,26 @@ public class OwnerFrame extends JFrame {
         return card;
     }
 
+    private void styleTable(JTable table) {
+        table.setBackground(SURFACE);
+        table.setForeground(TEXT);
+        table.setShowHorizontalLines(false);
+        table.setShowVerticalLines(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setGridColor(BORDER);
+        table.setFillsViewportHeight(true);
+        table.setSelectionBackground(tableSelection);
+        table.setSelectionForeground(TEXT);
+        table.setDefaultRenderer(Object.class, new ZebraTableCellRenderer());
+
+        JTableHeader header = table.getTableHeader();
+        header.setReorderingAllowed(false);
+        header.setPreferredSize(new Dimension(header.getPreferredSize().width, 34));
+        header.setDefaultRenderer(new HeaderRenderer());
+        header.setBackground(TABLE_HEADER_BG);
+        header.setForeground(TABLE_HEADER_TEXT);
+    }
+
     private void styleField(JComponent c) {
         c.setFont(new Font("SansSerif", Font.PLAIN, 13));
         c.setBackground(Color.WHITE);
@@ -1569,6 +1591,42 @@ public class OwnerFrame extends JFrame {
         return Math.min(255, Math.max(0, value));
     }
 
+    private class HeaderRenderer implements TableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            JLabel l = new JLabel(value == null ? "" : value.toString());
+            l.setOpaque(true);
+            l.setBackground(TABLE_HEADER_BG);
+            l.setForeground(TABLE_HEADER_TEXT);
+            l.setFont(new Font("SansSerif", Font.BOLD, 12));
+            l.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER),
+                    new EmptyBorder(6, 10, 6, 10)
+            ));
+            return l;
+        }
+    }
+
+    private class ZebraTableCellRenderer extends javax.swing.table.DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            if (isSelected) {
+                c.setBackground(tableSelection);
+                c.setForeground(TEXT);
+            } else {
+                c.setBackground(row % 2 == 0 ? SURFACE : TABLE_ROW_ALT);
+                c.setForeground(TEXT);
+            }
+            if (c instanceof JComponent) {
+                ((JComponent) c).setBorder(new EmptyBorder(6, 10, 6, 10));
+            }
+            return c;
+        }
+    }
+
     private class LockedUserRenderer extends javax.swing.table.DefaultTableCellRenderer {
         private final Color lockedBg = new Color(254, 226, 226);
         private final Color lockedFg = new Color(153, 27, 27);
@@ -1590,9 +1648,15 @@ public class OwnerFrame extends JFrame {
             if (locked && !isSelected) {
                 c.setBackground(lockedBg);
                 c.setForeground(lockedFg);
-            } else if (!isSelected) {
-                c.setBackground(Color.WHITE);
+            } else if (isSelected) {
+                c.setBackground(tableSelection);
                 c.setForeground(TEXT);
+            } else if (!isSelected) {
+                c.setBackground(row % 2 == 0 ? SURFACE : TABLE_ROW_ALT);
+                c.setForeground(TEXT);
+            }
+            if (c instanceof JComponent) {
+                ((JComponent) c).setBorder(new EmptyBorder(6, 10, 6, 10));
             }
             return c;
         }
