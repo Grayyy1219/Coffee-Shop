@@ -94,7 +94,7 @@ public class CashierPanel extends JPanel {
     private final Color menuAccent = primary;
 
     private static final NumberFormat MONEY_PH = NumberFormat.getCurrencyInstance(new Locale("en", "PH"));
-    private static final int MENU_IMAGE_SIZE = 54;
+    private static final int MENU_IMAGE_SIZE = 150;
     private final Map<String, ImageIcon> menuImageCache = new HashMap<>();
 
     public CashierPanel(boolean previewMode, String username, String shopName) {
@@ -190,7 +190,7 @@ public class CashierPanel extends JPanel {
         JList<MenuItem> menuList = new JList<>(menuModel);
         menuList.setCellRenderer(new MenuItemRenderer());
         menuList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        menuList.setFixedCellHeight(90);
+        menuList.setFixedCellHeight(150);
         menuList.setFixedCellWidth(250);
         menuList.setLayoutOrientation(JList.VERTICAL);
         menuList.setVisibleRowCount(0);
@@ -905,24 +905,7 @@ public class CashierPanel extends JPanel {
             allMenuItems.addAll(menuItemDAO.findAll());
             if (allMenuItems.isEmpty()) throw new IllegalStateException("No menu items returned");
         } catch (Exception ex) {
-            // fallback seed (local preview) if DB is unavailable
             allMenuItems.clear();
-            allMenuItems.add(new MenuItem("CF001", "Espresso", "Coffee", new BigDecimal("95"),
-                    "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=200&q=60"));
-            allMenuItems.add(new MenuItem("CF002", "Latte", "Coffee", new BigDecimal("125"),
-                    "https://images.unsplash.com/photo-1481391032119-d89fee407e44?auto=format&fit=crop&w=200&q=60"));
-            allMenuItems.add(new MenuItem("CF003", "Cappuccino", "Coffee", new BigDecimal("115"),
-                    "https://images.unsplash.com/photo-1504753793650-d4a2b783c15e?auto=format&fit=crop&w=200&q=60"));
-            allMenuItems.add(new MenuItem("CF004", "Cold Brew", "Coffee", new BigDecimal("150"),
-                    "https://images.unsplash.com/photo-1507133750040-4a8f57021571?auto=format&fit=crop&w=200&q=60"));
-            allMenuItems.add(new MenuItem("TE001", "Matcha Latte", "Tea", new BigDecimal("145"),
-                    "https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&w=200&q=60"));
-            allMenuItems.add(new MenuItem("TE002", "Chai Latte", "Tea", new BigDecimal("130"),
-                    "https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&w=200&q=60"));
-            allMenuItems.add(new MenuItem("PA001", "Blueberry Muffin", "Pastry", new BigDecimal("85"),
-                    "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=200&q=60"));
-            allMenuItems.add(new MenuItem("FD001", "Breakfast Sandwich", "Food", new BigDecimal("185"),
-                    "https://images.unsplash.com/photo-1505253758473-96b7015fcd40?auto=format&fit=crop&w=200&q=60"));
             setStatus("Loaded fallback menu (DB unavailable)", WARN);
         }
     }
@@ -1200,13 +1183,13 @@ public class CashierPanel extends JPanel {
                     new EmptyBorder(2, 2, 2, 2)
             ));
 
-            lblName.setFont(new Font("SansSerif", Font.BOLD, 13));
+            lblName.setFont(new Font("SansSerif", Font.BOLD, 18));
             lblName.setForeground(TEXT);
 
-            lblPrice.setFont(new Font("SansSerif", Font.BOLD, 13));
+            lblPrice.setFont(new Font("SansSerif", Font.BOLD, 16));
             lblPrice.setForeground(menuAccent);
 
-            lblCategory.setFont(new Font("SansSerif", Font.PLAIN, 11));
+            lblCategory.setFont(new Font("SansSerif", Font.PLAIN, 14));
             lblCategory.setForeground(MUTED);
 
             JPanel text = new JPanel();
