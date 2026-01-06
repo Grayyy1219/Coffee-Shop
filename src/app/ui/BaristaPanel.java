@@ -8,6 +8,7 @@ import app.model.OrderQueue;
 import app.util.LinearSearch;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
@@ -586,10 +587,28 @@ public class BaristaPanel extends JPanel {
 
     private void styleField(JComponent field) {
         field.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER, 1),
-                new EmptyBorder(8, 10, 8, 10)
-        ));
+        field.setBackground(new Color(248, 250, 255));
+        field.setForeground(TEXT);
+        field.setOpaque(true);
+        field.setBorder(buildFieldBorder(false));
+        field.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override public void focusGained(java.awt.event.FocusEvent e) { field.setBorder(buildFieldBorder(true)); }
+            @Override public void focusLost(java.awt.event.FocusEvent e) { field.setBorder(buildFieldBorder(false)); }
+        });
+    }
+
+    private Border buildFieldBorder(boolean focused) {
+        Color glow = new Color(primary.getRed(), primary.getGreen(), primary.getBlue(), focused ? 160 : 70);
+        Color line = focused ? primary : BORDER;
+        int thickness = focused ? 2 : 1;
+        int pad = focused ? 8 : 9;
+        return BorderFactory.createCompoundBorder(
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(glow, focused ? 3 : 1),
+                        BorderFactory.createLineBorder(line, thickness)
+                ),
+                new EmptyBorder(pad, 10, pad, 10)
+        );
     }
 
     private JButton primary(String text) {

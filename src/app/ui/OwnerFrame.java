@@ -11,6 +11,7 @@ import app.model.User;
 import app.util.InsertionSort;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
@@ -331,6 +332,9 @@ public class OwnerFrame extends JFrame {
 
         salesSortMode = new JComboBox<>(new String[]{"Date (Newest)", "Total (High to Low)"});
         styleField(salesSortMode);
+        salesSortMode.setPreferredSize(new Dimension(220, 50));
+
+        salesSortMode.setMaximumSize(new Dimension(220, 50));
         salesSortMode.addActionListener(e -> refreshDashboardSafe());
 
         JPanel salesHeader = new JPanel(new BorderLayout());
@@ -1505,12 +1509,29 @@ public class OwnerFrame extends JFrame {
 
     private void styleField(JComponent c) {
         c.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        c.setBackground(Color.WHITE);
-        c.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(222, 226, 230), 1),
-                new EmptyBorder(10, 12, 10, 12)
-        ));
+        c.setBackground(new Color(248, 250, 255));
+        c.setForeground(TEXT);
+        c.setOpaque(true);
+        c.setBorder(buildFieldBorder(false));
         c.setPreferredSize(new Dimension(10, 44));
+        c.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override public void focusGained(java.awt.event.FocusEvent e) { c.setBorder(buildFieldBorder(true)); }
+            @Override public void focusLost(java.awt.event.FocusEvent e) { c.setBorder(buildFieldBorder(false)); }
+        });
+    }
+
+    private Border buildFieldBorder(boolean focused) {
+        Color glow = new Color(primary.getRed(), primary.getGreen(), primary.getBlue(), focused ? 160 : 70);
+        Color line = focused ? primary : BORDER;
+        int thickness = focused ? 2 : 1;
+        int pad = focused ? 9 : 10;
+        return BorderFactory.createCompoundBorder(
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(glow, focused ? 3 : 1),
+                        BorderFactory.createLineBorder(line, thickness)
+                ),
+                new EmptyBorder(pad, 12, pad, 12)
+        );
     }
 
     private JButton primary(String text) {

@@ -165,6 +165,9 @@ public class LoginFrame extends JFrame {
         field.setToolTipText(tooltip);
         field.setFont(new Font("SansSerif", Font.PLAIN, 14));
         field.setPreferredSize(new Dimension(10, 44)); // height; width handled by layout
+        field.setOpaque(true);
+        field.setBackground(new Color(248, 250, 255));
+        field.setForeground(new Color(15, 23, 42));
         setFieldBorder(field, false);
 
         field.addFocusListener(new FocusAdapter() {
@@ -190,12 +193,17 @@ public class LoginFrame extends JFrame {
     }
 
     private void setFieldBorder(JComponent field, boolean focused) {
-        Color line = focused ? accent : new Color(222, 226, 230);
+        Color base = new Color(226, 232, 240);
+        Color glow = new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 120);
+        Color line = focused ? accent : base;
         int thickness = focused ? 2 : 1;
         int pad = focused ? 9 : 10;
 
         field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(line, thickness),
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(glow, focused ? 3 : 1),
+                        BorderFactory.createLineBorder(line, thickness)
+                ),
                 BorderFactory.createEmptyBorder(pad, 12, pad, 12)
         ));
     }
